@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .font-syne {
+    font-family: 'Syne', sans-serif;
+  }
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+.bg-grid-pattern {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+}

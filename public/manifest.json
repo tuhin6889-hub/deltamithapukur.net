@@ -1,0 +1,22 @@
+{
+  "short_name": "Delta NOC",
+  "name": "Delta Mithapukur ISP NOC & Support App",
+  "icons": [
+    {
+      "src": "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=192&auto=format&fit=crop&q=80",
+      "type": "image/jpeg",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=512&auto=format&fit=crop&q=80",
+      "type": "image/jpeg",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#090d16",
+  "theme_color": "#10b981",
+  "display": "standalone",
+  "orientation": "portrait",
+  "categories": ["utilities", "productivity", "business"]
+}
