@@ -245,11 +245,13 @@ export const NocPortal: React.FC<NocPortalProps> = ({
   const filteredTickets = tickets.filter(t => {
     // Search query match
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
       const matches = t.id.toLowerCase().includes(q) || 
                       t.cid.toLowerCase().includes(q) || 
                       t.clientName.toLowerCase().includes(q) || 
+                      (t.clientPhone && t.clientPhone.toLowerCase().includes(q)) ||
                       t.area.toLowerCase().includes(q) ||
+                      t.category.toLowerCase().includes(q) ||
                       t.title.toLowerCase().includes(q);
       if (!matches) return false;
     }
@@ -705,16 +707,25 @@ export const NocPortal: React.FC<NocPortalProps> = ({
                 </p>
               </div>
 
-              {/* Search Box */}
-              <div className="relative w-full sm:w-64">
-                <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+              {/* Ticket Search Bar */}
+              <div className="relative w-full sm:w-80">
+                <Search className="w-4 h-4 text-teal-400 absolute left-3 top-2.5" />
                 <input
                   type="text"
-                  placeholder={lang === 'bn' ? 'টিকেট আইডি, সিআইডি বা নাম খুঁজুন...' : 'Search CID, Ticket #, Area...'}
+                  placeholder={lang === 'bn' ? 'CID, টিকেট ID, ফোন বা গ্রাহকের নাম খুঁজুন...' : 'Search by CID, Ticket ID, Client Name...'}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className="w-full pl-9 pr-8 py-1.5 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-inner font-medium"
                 />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs font-bold w-4 h-4 flex items-center justify-center rounded-full bg-slate-800"
+                    title="Clear search"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             </div>
 

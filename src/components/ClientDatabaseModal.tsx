@@ -58,6 +58,42 @@ export const ClientDatabaseModal: React.FC<ClientDatabaseModalProps> = ({
     return matchesSearch && matchesArea && matchesStatus;
   });
 
+  const handleDownloadCSV = () => {
+    if (filteredClients.length === 0) return;
+
+    const headers = ['CID', 'Name', 'Phone', 'Area', 'Package', 'IP Address', 'ONU MAC', 'Optical Power', 'Balance (BDT)', 'Status'];
+    
+    const csvRows = [
+      headers.join(','),
+      ...filteredClients.map(client => {
+        const escape = (str: string | number) => `"${String(str).replace(/"/g, '""')}"`;
+        return [
+          escape(client.cid),
+          escape(client.name),
+          escape(client.phone),
+          escape(client.area),
+          escape(client.package),
+          escape(client.ipAddress),
+          escape(client.onuMac),
+          escape(client.opticalPower),
+          escape(client.balance),
+          escape(client.status),
+        ].join(',');
+      })
+    ];
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Delta_ISP_Clients_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const totalClients = clients.length;
   const activeCount = clients.filter(c => c.status === 'Active').length;
   const suspendedCount = clients.filter(c => c.status === 'Suspended').length;
@@ -175,6 +211,16 @@ export const ClientDatabaseModal: React.FC<ClientDatabaseModalProps> = ({
               <option value="Active">Active</option>
               <option value="Suspended">Suspended</option>
             </select>
+
+            <button
+              onClick={handleDownloadCSV}
+              disabled={filteredClients.length === 0}
+              className="px-3.5 py-2 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl border border-sky-400/30 flex items-center gap-1.5 transition-all shadow-md active:scale-95 whitespace-nowrap"
+              title="Download current client list as CSV"
+            >
+              <Download className="w-4 h-4 text-white" />
+              <span>{lang === 'bn' ? 'CSV ডাউনলোড' : 'Download CSV'}</span>
+            </button>
           </div>
         </div>
 
@@ -256,12 +302,22 @@ export const ClientDatabaseModal: React.FC<ClientDatabaseModalProps> = ({
           <div>
             Showing <strong className="text-white">{filteredClients.length}</strong> of <strong className="text-white">{totalClients}</strong> ISP Client Records
           </div>
-          <button
-            onClick={onClose}
-            className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-lg border border-slate-700 transition-colors"
-          >
-            Close
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDownloadCSV}
+              disabled={filteredClients.length === 0}
+              className="px-3.5 py-1.5 bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 font-bold rounded-lg border border-sky-500/30 transition-all flex items-center gap-1.5 disabled:opacity-50"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>{lang === 'bn' ? 'CSV ডাউনলোড' : 'Export CSV'}</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-lg border border-slate-700 transition-colors"
+            >
+              Close
+            </button>
+          </div>
         </div>
 
       </div>

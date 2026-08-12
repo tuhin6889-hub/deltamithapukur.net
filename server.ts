@@ -9,9 +9,10 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+export const app = express();
+
 async function startServer() {
-  const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   app.use(express.json());
 
@@ -300,6 +301,11 @@ Please return JSON with:
     });
     app.use(vite.middlewares);
   } else {
+    // Handle Vercel system requests when deployed outside Vercel edge proxy
+    app.get("/_vercel/*", (req, res) => {
+      res.status(204).end();
+    });
+
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
@@ -313,3 +319,5 @@ Please return JSON with:
 }
 
 startServer();
+
+export default app;

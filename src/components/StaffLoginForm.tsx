@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { UserRole } from '../types';
 import { DeltaLogo } from './DeltaLogo';
 import { 
@@ -9,21 +9,9 @@ import {
   Eye, 
   EyeOff, 
   KeyRound, 
-  CheckCircle2, 
   AlertCircle,
-  Sparkles,
   ArrowRight,
-  UserCheck,
-  Fingerprint,
-  Scan,
-  Zap,
-  Shield,
-  Activity,
-  Check,
-  LockKeyhole,
-  Smartphone,
-  Server,
-  RefreshCw
+  Activity
 } from 'lucide-react';
 
 interface StaffLoginFormProps {
@@ -100,7 +88,7 @@ export const StaffLoginForm: React.FC<StaffLoginFormProps> = ({
   onSwitchRole,
 }) => {
   const [activeRole, setActiveRole] = useState<'MANAGER' | 'NOC'>(initialRole);
-  const [loginMethod, setLoginMethod] = useState<'FAST_BIOMETRIC' | 'PIN_PAD' | 'PASSWORD'>('FAST_BIOMETRIC');
+  const [loginMethod, setLoginMethod] = useState<'PASSWORD' | 'PIN_PAD'>('PASSWORD');
   
   // Form State
   const [username, setUsername] = useState('');
@@ -109,38 +97,9 @@ export const StaffLoginForm: React.FC<StaffLoginFormProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Proctored Scan Simulation State
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanStep, setScanStep] = useState<string>('');
-  const [scanProgress, setScanProgress] = useState(0);
 
   // Security Logs & IP
   const [ipAddress] = useState('103.145.23.10');
-  const [securityToken] = useState('DELTA-PROCTORED-SSL-256BIT-HW9821');
-
-  // Trigger Proctored Scan Simulation and perform login
-  const triggerProctoredAuth = (userToLogin: { role: 'MANAGER' | 'NOC'; username: string; name: string }) => {
-    setIsScanning(true);
-    setScanProgress(10);
-    setScanStep(lang === 'bn' ? 'হার্ডওয়্যার এনক্রিপশন ও ডিভাইস টোকেন ভ্যালিডেশন...' : 'Checking Hardware Token & SSL Security...');
-
-    setTimeout(() => {
-      setScanProgress(45);
-      setScanStep(lang === 'bn' ? 'বায়োমেট্রিক ও প্রক্টর সিকিউরিটি হ্যাশ যাচাই করা হচ্ছে...' : 'Verifying Proctored Biometric Hash & Zero-Trust Key...');
-    }, 450);
-
-    setTimeout(() => {
-      setScanProgress(85);
-      setScanStep(lang === 'bn' ? 'ডেল্টা এনওসি হাই-প্রটেক্টেড সার্ভারে সেশন রেজিস্টারড!' : 'Delta NOC High-Protection Server Session Granted!');
-    }, 900);
-
-    setTimeout(() => {
-      setScanProgress(100);
-      setIsScanning(false);
-      onLoginSuccess(userToLogin);
-    }, 1200);
-  };
 
   // Handle Standard Password Login
   const handleSubmitPassword = (e: React.FormEvent) => {
@@ -168,7 +127,7 @@ export const StaffLoginForm: React.FC<StaffLoginFormProps> = ({
       );
 
       if (matched) {
-        triggerProctoredAuth({
+        onLoginSuccess({
           role: matched.role,
           username: matched.username,
           name: matched.name,
@@ -177,7 +136,7 @@ export const StaffLoginForm: React.FC<StaffLoginFormProps> = ({
         (activeRole === 'MANAGER' && (cleanUsername === 'manager' || cleanUsername === 'admin' || cleanUsername.includes('manager'))) ||
         (activeRole === 'NOC' && (cleanUsername === 'noc' || cleanUsername === 'engineer' || cleanUsername.includes('noc')))
       ) {
-        triggerProctoredAuth({
+        onLoginSuccess({
           role: activeRole,
           username: cleanUsername,
           name: activeRole === 'MANAGER' ? 'ব্রাঞ্চ ম্যানেজার (HQ)' : `নোক ইঞ্জিনিয়ার (${cleanUsername.toUpperCase()})`,
@@ -185,8 +144,8 @@ export const StaffLoginForm: React.FC<StaffLoginFormProps> = ({
       } else {
         setErrorMsg(
           lang === 'bn' 
-            ? 'ভুল ইউজারনেম বা পাসওয়ার্ড! নিচে ১-ক্লিক ফাস্ট পিন বা ডেমো পাস ব্যবহার করুন।' 
-            : 'Invalid credentials! Try 1-Click Fast Pass or PIN entry below.'
+            ? 'ভুল ইউজারনেম বা পাসওয়ার্ড! ডেমো অ্যাকাউন্ট সিলেক্ট করুন।' 
+            : 'Invalid credentials! Select a quick demo account below.'
         );
       }
     }, 300);
@@ -203,13 +162,13 @@ export const StaffLoginForm: React.FC<StaffLoginFormProps> = ({
         // Auto verify 4 digit PIN
         const matched = VALID_ACCOUNTS.find(acc => acc.role === activeRole && (acc.pin === newPin || newPin === '2026' || newPin === '1234'));
         if (matched) {
-          triggerProctoredAuth({
+          onLoginSuccess({
             role: matched.role,
             username: matched.username,
             name: matched.name,
           });
         } else if (newPin === '2026' || newPin === '1234' || newPin === '0000') {
-          triggerProctoredAuth({
+          onLoginSuccess({
             role: activeRole,
             username: activeRole === 'MANAGER' ? 'manager' : 'noc',
             name: activeRole === 'MANAGER' ? 'ব্রাঞ্চ ম্যানেজার (Mithapukur HQ)' : 'নোক ইঞ্জিনিয়ার (NOC Core)',
@@ -241,44 +200,6 @@ export const StaffLoginForm: React.FC<StaffLoginFormProps> = ({
       <div className="absolute bottom-10 left-10 w-80 h-80 bg-cyan-600/10 rounded-full blur-2xl pointer-events-none" />
       <div className="absolute top-10 right-10 w-72 h-72 bg-emerald-600/10 rounded-full blur-2xl pointer-events-none" />
 
-      {/* Proctored Scanning Animation Modal Overlay */}
-      {isScanning && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl animate-fade-in">
-          <div className="bg-slate-900 border border-emerald-500/40 p-8 rounded-3xl max-w-sm w-full text-center space-y-6 shadow-2xl relative overflow-hidden">
-            <div className="absolute -top-12 -left-12 w-32 h-32 bg-emerald-500/20 rounded-full blur-2xl" />
-            
-            <div className="relative inline-flex items-center justify-center">
-              <div className="w-24 h-24 rounded-full border-4 border-emerald-500/20 border-t-emerald-400 animate-spin flex items-center justify-center" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <ShieldCheck className="w-10 h-10 text-emerald-400 animate-pulse" />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="text-base font-extrabold text-white font-syne">
-                {lang === 'bn' ? 'হাই-প্রটেক্টেড বায়োমেট্রিক লগইন...' : 'Proctored High Security Login...'}
-              </h3>
-              <p className="text-xs text-emerald-400 font-semibold animate-pulse">
-                {scanStep}
-              </p>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
-              <div 
-                className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full transition-all duration-300"
-                style={{ width: `${scanProgress}%` }}
-              />
-            </div>
-
-            <div className="text-[10px] text-slate-500 flex items-center justify-center gap-1.5">
-              <LockKeyhole className="w-3 h-3 text-emerald-500" />
-              <span>TLS 1.3 256-Bit Encrypted • Proctored Auth</span>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="w-full max-w-lg relative z-10 space-y-4">
         
         {/* Top Security Banner Header */}
@@ -289,9 +210,9 @@ export const StaffLoginForm: React.FC<StaffLoginFormProps> = ({
             </div>
             <div>
               <div className="font-bold text-slate-200 flex items-center gap-1.5">
-                <span>{lang === 'bn' ? 'প্রক্টরড ফাস্ট সিকিউরিটি প্যানেল' : 'Proctored Fast Login Gateway'}</span>
+                <span>{lang === 'bn' ? 'স্টাফ সিকিউরিটি প্যানেল' : 'Staff Login Gateway'}</span>
                 <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-black border border-emerald-500/30">
-                  HIGH PROTECTED
+                  SECURE SSL
                 </span>
               </div>
               <div className="text-[10px] text-slate-400 flex items-center gap-2 mt-0.5">
@@ -320,8 +241,8 @@ export const StaffLoginForm: React.FC<StaffLoginFormProps> = ({
           <div className="flex flex-col items-center justify-center mb-6">
             <DeltaLogo size="lg" theme="dark" showSubtitle={true} />
             <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-xs font-bold text-emerald-400">
-              <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-              <span>{lang === 'bn' ? 'হাই-প্রটেক্টেড স্টাফ লগইন গেটওয়ে' : 'Very High Protected Fast Login Portal'}</span>
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{lang === 'bn' ? 'স্টাফ পোর্টাল লগইন প্যানেল' : 'Authorized Staff Portal Login'}</span>
             </div>
           </div>
 
@@ -366,15 +287,15 @@ export const StaffLoginForm: React.FC<StaffLoginFormProps> = ({
           <div className="flex items-center justify-center gap-1.5 bg-slate-950/60 p-1 rounded-xl border border-slate-800/80 mb-6 text-xs">
             <button
               type="button"
-              onClick={() => setLoginMethod('FAST_BIOMETRIC')}
+              onClick={() => setLoginMethod('PASSWORD')}
               className={`flex-1 py-1.5 px-2 rounded-lg font-extrabold transition-all flex items-center justify-center gap-1.5 ${
-                loginMethod === 'FAST_BIOMETRIC'
+                loginMethod === 'PASSWORD'
                   ? 'bg-emerald-500 text-slate-950 shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Fingerprint className="w-3.5 h-3.5" />
-              <span>{lang === 'bn' ? '১-ক্লিক ফাস্ট পাস' : '1-Click Fast Pass'}</span>
+              <Lock className="w-3.5 h-3.5" />
+              <span>{lang === 'bn' ? 'পাসওয়ার্ড' : 'Password'}</span>
             </button>
 
             <button
@@ -389,19 +310,6 @@ export const StaffLoginForm: React.FC<StaffLoginFormProps> = ({
               <KeyRound className="w-3.5 h-3.5" />
               <span>{lang === 'bn' ? '৪-ডিজিট পিন (PIN)' : '4-Digit PIN'}</span>
             </button>
-
-            <button
-              type="button"
-              onClick={() => setLoginMethod('PASSWORD')}
-              className={`flex-1 py-1.5 px-2 rounded-lg font-extrabold transition-all flex items-center justify-center gap-1.5 ${
-                loginMethod === 'PASSWORD'
-                  ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Lock className="w-3.5 h-3.5" />
-              <span>{lang === 'bn' ? 'পাসওয়ার্ড' : 'Password'}</span>
-            </button>
           </div>
 
           {/* Error Message Box */}
@@ -412,98 +320,7 @@ export const StaffLoginForm: React.FC<StaffLoginFormProps> = ({
             </div>
           )}
 
-          {/* METHOD 1: 1-Click Fast Biometric Authenticator */}
-          {loginMethod === 'FAST_BIOMETRIC' && (
-            <div className="space-y-4">
-              <div className="p-4 bg-slate-950/80 border border-emerald-500/30 rounded-2xl text-center space-y-3">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-500/10 border-2 border-emerald-500/30 text-emerald-400 relative group cursor-pointer active:scale-95 transition-transform"
-                     onClick={() => {
-                       const account = VALID_ACCOUNTS.find(acc => acc.role === activeRole) || VALID_ACCOUNTS[0];
-                       triggerProctoredAuth({
-                         role: activeRole,
-                         username: account.username,
-                         name: account.name,
-                       });
-                     }}
-                >
-                  <Fingerprint className="w-9 h-9 text-emerald-400 animate-pulse group-hover:scale-110 transition-transform" />
-                  <span className="absolute -bottom-1 -right-1 p-1 bg-emerald-500 text-slate-950 rounded-full border border-slate-900">
-                    <Check className="w-3 h-3 stroke-[3]" />
-                  </span>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-extrabold text-white">
-                    {lang === 'bn' ? 'বায়োমেট্রিক ও প্রক্টরড এক্সেস টেস্ট' : 'Proctored Biometric Instant Touch ID'}
-                  </h4>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {lang === 'bn' 
-                      ? 'বায়োমেট্রিক আইকন বা নিচের যেকোনো ১-ক্লিক বাটন চাপলে অতি দ্রুত লগইন সম্পন্ন হবে।' 
-                      : 'Tap the fingerprint sensor or select a staff passkey below for zero-delay login.'}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const account = VALID_ACCOUNTS.find(acc => acc.role === activeRole) || VALID_ACCOUNTS[0];
-                    triggerProctoredAuth({
-                      role: activeRole,
-                      username: account.username,
-                      name: account.name,
-                    });
-                  }}
-                  className="w-full py-3 px-4 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 hover:from-emerald-400 hover:to-teal-300 text-slate-950 rounded-xl font-extrabold text-xs transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 active:scale-98"
-                >
-                  <Zap className="w-4 h-4 fill-slate-950" />
-                  <span>
-                    {activeRole === 'MANAGER' 
-                      ? (lang === 'bn' ? '⚡ ১-ক্লিক ম্যানেজার প্রক্টরড এক্সেস' : '⚡ 1-Click Manager Proctored Access')
-                      : (lang === 'bn' ? '⚡ ১-ক্লিক নোক ইঞ্জিনিয়ার এক্সেস' : '⚡ 1-Click NOC Engineer Access')}
-                  </span>
-                </button>
-              </div>
-
-              {/* Fast Pass Staff Presets */}
-              <div className="space-y-2">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                  {lang === 'bn' ? 'সরাসরি অনুমোদিত স্টাফ পাসের তালিকা:' : 'Authorized Staff Quick Passkeys:'}
-                </span>
-
-                <div className="grid grid-cols-1 gap-2">
-                  {VALID_ACCOUNTS.filter(acc => acc.role === activeRole).map((acc) => (
-                    <button
-                      key={acc.username + acc.name}
-                      type="button"
-                      onClick={() => triggerProctoredAuth({ role: acc.role, username: acc.username, name: acc.name })}
-                      className="flex items-center justify-between p-3 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 rounded-2xl transition-all text-left group active:scale-98"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-colors">
-                          <UserCheck className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-extrabold text-slate-200 group-hover:text-emerald-400 transition-colors">
-                            {acc.name}
-                          </div>
-                          <div className="text-[10px] text-slate-400">
-                            {acc.designation} • PIN: <span className="text-emerald-400 font-bold">{acc.pin}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-emerald-500/10 group-hover:bg-emerald-500 group-hover:text-slate-950 text-emerald-400 border border-emerald-500/30 transition-all flex items-center gap-1">
-                        <span>{lang === 'bn' ? 'লগইন' : 'Login'}</span>
-                        <ArrowRight className="w-3 h-3" />
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* METHOD 2: 4-Digit Quick PIN Pad */}
+          {/* METHOD 1: 4-Digit Quick PIN Pad */}
           {loginMethod === 'PIN_PAD' && (
             <div className="space-y-4">
               <div className="text-center space-y-2">
@@ -559,10 +376,10 @@ export const StaffLoginForm: React.FC<StaffLoginFormProps> = ({
                   type="button"
                   onClick={() => {
                     const matchAcc = VALID_ACCOUNTS.find(acc => acc.role === activeRole) || VALID_ACCOUNTS[0];
-                    triggerProctoredAuth({ role: activeRole, username: matchAcc.username, name: matchAcc.name });
+                    onLoginSuccess({ role: activeRole, username: matchAcc.username, name: matchAcc.name });
                   }}
                   className="py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-2xl transition-all active:scale-95 flex items-center justify-center"
-                  title="Auto Authenticate"
+                  title="Authenticate"
                 >
                   <ArrowRight className="w-5 h-5 stroke-[3]" />
                 </button>
@@ -570,7 +387,7 @@ export const StaffLoginForm: React.FC<StaffLoginFormProps> = ({
             </div>
           )}
 
-          {/* METHOD 3: Standard Password Login */}
+          {/* METHOD 2: Standard Password Login */}
           {loginMethod === 'PASSWORD' && (
             <form onSubmit={handleSubmitPassword} className="space-y-4">
               {/* Username Input */}
@@ -621,6 +438,27 @@ export const StaffLoginForm: React.FC<StaffLoginFormProps> = ({
                 </div>
               </div>
 
+              {/* Preset Account Badges */}
+              <div className="pt-1">
+                <span className="text-[10px] text-slate-400 font-semibold block mb-1.5">
+                  {lang === 'bn' ? 'ডেমো অ্যাকাউন্ট কুইক ফিল:' : 'Quick Demo Credentials:'}
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {VALID_ACCOUNTS.filter(acc => acc.role === activeRole).map((acc) => (
+                    <button
+                      key={acc.username + acc.name}
+                      type="button"
+                      onClick={() => handleQuickFill(acc)}
+                      className="px-2.5 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-[10px] text-slate-300 hover:text-emerald-400 rounded-lg transition-colors flex items-center gap-1 font-mono"
+                    >
+                      <span className="font-bold">{acc.username}</span>
+                      <span className="text-slate-500">/</span>
+                      <span>{acc.password}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Submit Button */}
               <button
                 type="submit"
@@ -632,7 +470,7 @@ export const StaffLoginForm: React.FC<StaffLoginFormProps> = ({
                 ) : (
                   <>
                     <ShieldCheck className="w-4 h-4" />
-                    <span>{lang === 'bn' ? 'প্রক্টরড প্যানেলে প্রবেশ করুন' : 'Sign In With Proctored SSL'}</span>
+                    <span>{lang === 'bn' ? 'স্টাফ প্যানেলে প্রবেশ করুন' : 'Sign In To Staff Portal'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}

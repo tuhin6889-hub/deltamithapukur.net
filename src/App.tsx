@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   UserRole, 
   DeviceMode, 
@@ -25,6 +25,7 @@ import { WhatsAppApiCenterModal } from './components/WhatsAppApiCenterModal';
 import { ClientDatabaseModal } from './components/ClientDatabaseModal';
 import { NewClientModal } from './components/NewClientModal';
 import { AndroidInstallModal } from './components/AndroidInstallModal';
+import { StaffToolbar } from './components/StaffToolbar';
 
 export default function App() {
   const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS);
@@ -51,6 +52,9 @@ export default function App() {
     name: 'ইঞ্জি: তানজিম আহমেদ (NOC Core)',
     role: 'NOC',
   });
+
+  // Employee check: Returns true if active session is a logged-in Manager or NOC engineer
+  const isEmployee = (currentRole === 'MANAGER' && managerUser !== null) || (currentRole === 'NOC' && nocUser !== null);
 
   const handleStaffLogin = (user: { role: 'MANAGER' | 'NOC'; username: string; name: string }) => {
     if (user.role === 'MANAGER') {
@@ -478,6 +482,7 @@ export default function App() {
           onAssignNocStaff={handleAssignNocStaff}
           onSendManualNotification={handleSendManualNotification}
           onOpenNewTicketModal={() => setIsNewTicketModalOpen(true)}
+          onOpenAddNewClient={() => setIsNewClientModalOpen(true)}
           currentUser={managerUser}
           onLogout={() => handleStaffLogout('MANAGER')}
         />
@@ -638,6 +643,18 @@ export default function App() {
         onClose={() => setIsClientDbModalOpen(false)}
         clients={clients}
         lang={lang}
+        onOpenAddNewClient={() => {
+          setIsClientDbModalOpen(false);
+          setIsNewClientModalOpen(true);
+        }}
+      />
+
+      <NewClientModal
+        isOpen={isNewClientModalOpen}
+        onClose={() => setIsNewClientModalOpen(false)}
+        onAddClient={handleAddClient}
+        clientsCount={clients.length}
+        lang={lang}
       />
 
       <AndroidInstallModal
@@ -645,6 +662,8 @@ export default function App() {
         onClose={() => setIsAndroidInstallModalOpen(false)}
         lang={lang}
       />
+
+      <StaffToolbar isEmployee={isEmployee} />
 
     </div>
   );

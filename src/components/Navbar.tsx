@@ -77,27 +77,17 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-[1920px] mx-auto px-3 sm:px-4 lg:px-6">
         <div className="flex items-center justify-between h-16">
           
           {/* Company Brand Logo & Backlink Home Button */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 -ml-1">
             <button 
               onClick={onGoHome}
-              className="group flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded-xl p-1 transition-all active:scale-95"
+              className="group flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded-xl p-0.5 transition-all active:scale-95 text-left"
               title={lang === 'bn' ? 'হোম পেজে ফিরে যান' : 'Back to Home Page'}
             >
               <DeltaLogo size="md" theme="dark" showSubtitle={true} />
-            </button>
-
-            {/* Direct Home Page Backlink Button */}
-            <button
-              onClick={onGoHome}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 rounded-xl border border-emerald-500/30 text-xs font-extrabold transition-all shadow-sm active:scale-95 group"
-              title={lang === 'bn' ? 'হোম পেজে ফিরে যান' : 'Back to Home Page'}
-            >
-              <Home className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
-              <span className="hidden sm:inline">{lang === 'bn' ? 'হোম পেজ' : 'Home Page'}</span>
             </button>
           </div>
 
@@ -219,6 +209,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <Database className="w-4 h-4 text-sky-400 animate-pulse" />
                 <span className="hidden lg:inline font-mono">{lang === 'bn' ? 'ক্লায়েন্ট ডাটাবেজ' : 'Client Database'}</span>
                 <span className="px-1 py-0.2 rounded bg-sky-500/30 text-sky-200 text-[9px] font-mono">DB</span>
+              </button>
+            )}
+
+            {/* Add Client Button */}
+            {onOpenAddNewClient && (
+              <button
+                onClick={onOpenAddNewClient}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-lg text-xs transition-all shadow-md active:scale-95 border border-sky-400/40"
+                title="Register New ISP Client Subscriber"
+              >
+                <UserPlus className="w-4 h-4 text-slate-950" />
+                <span className="hidden sm:inline font-mono">{lang === 'bn' ? 'ক্লায়েন্ট যোগ' : 'Add Client'}</span>
               </button>
             )}
 

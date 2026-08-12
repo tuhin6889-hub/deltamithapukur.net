@@ -18,6 +18,11 @@ import {
   Sparkles,
   ShieldAlert,
   ChevronRight,
+  ChevronLeft,
+  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Sidebar,
   TrendingUp,
   Activity,
   Layers,
@@ -33,6 +38,7 @@ import {
   RotateCcw,
   Wrench,
   PlusCircle,
+  UserPlus,
   Server,
   Compass,
   Map,
@@ -65,6 +71,7 @@ interface ManagerDashboardProps {
   onAssignNocStaff: (ticketId: string, staffName: string) => void;
   onSendManualNotification: (ticketId: string, cid: string, message: string, channel: 'WhatsApp' | 'Email' | 'SMS') => void;
   onOpenNewTicketModal: () => void;
+  onOpenAddNewClient?: () => void;
   currentUser?: { username: string; name: string } | null;
   onLogout?: () => void;
 }
@@ -80,10 +87,66 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   onAssignNocStaff,
   onSendManualNotification,
   onOpenNewTicketModal,
+  onOpenAddNewClient,
   currentUser,
   onLogout,
 }) => {
   const [activeTab, setActiveTab] = useState<'KPI_DASHBOARD' | 'TICKETS' | 'NOC_STAFF' | 'CLIENTS' | 'BROADCAST'>('KPI_DASHBOARD');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  const navItems = [
+    {
+      id: 'KPI_DASHBOARD' as const,
+      labelBn: 'কেপিআই ড্যাশবোর্ড',
+      labelEn: 'KPI Dashboard',
+      icon: BarChart2,
+      badge: 'Recharts',
+      badgeClass: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+      descriptionBn: 'ISP নেটওয়ার্ক এনালাইটিক্স',
+      descriptionEn: 'Network analytics & trends',
+    },
+    {
+      id: 'TICKETS' as const,
+      labelBn: 'সকল সাপোর্ট টিকেট',
+      labelEn: 'Support Tickets',
+      icon: Layers,
+      badge: tickets.length.toString(),
+      badgeClass: 'bg-slate-800 text-slate-200 border border-slate-700',
+      descriptionBn: 'কমপ্লেন ও ডিসপ্যাচ ট্র্যাকিং',
+      descriptionEn: 'Active complaints & dispatch',
+    },
+    {
+      id: 'NOC_STAFF' as const,
+      labelBn: 'নোক টিম স্টাফ ডিউটি',
+      labelEn: 'NOC Duty & Roster',
+      icon: Users,
+      badge: nocStaff.length.toString(),
+      badgeClass: 'bg-slate-800 text-slate-200 border border-slate-700',
+      descriptionBn: 'টেকনিশিয়ান ও শিফট ডিউটি',
+      descriptionEn: 'Staff shift & SLA tracking',
+    },
+    {
+      id: 'CLIENTS' as const,
+      labelBn: 'গ্রাহক রেকর্ড (CID)',
+      labelEn: 'Client Database',
+      icon: FileText,
+      badge: clients.length.toString(),
+      badgeClass: 'bg-slate-800 text-slate-200 border border-slate-700',
+      descriptionBn: 'গ্রাহক সাবস্ক্রিপশন রেকর্ড',
+      descriptionEn: 'CID, IP & package records',
+    },
+    {
+      id: 'BROADCAST' as const,
+      labelBn: 'হোয়াটসঅ্যাপ বার্তা',
+      labelEn: 'WhatsApp Dispatch',
+      icon: Send,
+      badge: 'SMS/WA',
+      badgeClass: 'bg-teal-500/20 text-teal-300 border border-teal-500/30',
+      descriptionBn: 'বাল্ক বার্তা ও আউটলেজ নোটিশ',
+      descriptionEn: 'Outage broadcasts & alerts',
+    },
+  ];
   const [trendRange, setTrendRange] = useState<7 | 14 | 30>(30);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedArea, setSelectedArea] = useState('ALL');
@@ -268,11 +331,16 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
 
   // Filtered Tickets
   const filteredTickets = tickets.filter(ticket => {
+    const q = searchQuery.toLowerCase().trim();
     const matchesSearch = 
-      ticket.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.cid.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.title.toLowerCase().includes(searchQuery.toLowerCase());
+      !q ||
+      ticket.id.toLowerCase().includes(q) ||
+      ticket.cid.toLowerCase().includes(q) ||
+      ticket.clientName.toLowerCase().includes(q) ||
+      (ticket.clientPhone && ticket.clientPhone.toLowerCase().includes(q)) ||
+      ticket.category.toLowerCase().includes(q) ||
+      ticket.area.toLowerCase().includes(q) ||
+      ticket.title.toLowerCase().includes(q);
 
     const matchesArea = selectedArea === 'ALL' || ticket.area.includes(selectedArea);
     const matchesStatus = selectedStatus === 'ALL' || ticket.status === selectedStatus;
@@ -343,6 +411,16 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
               </div>
             )}
 
+            {onOpenAddNewClient && (
+              <button
+                onClick={onOpenAddNewClient}
+                className="px-3.5 py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold rounded-xl text-xs md:text-sm transition-all shadow-lg flex items-center gap-2 active:scale-95"
+              >
+                <UserPlus className="w-4 h-4 text-slate-950" />
+                <span>{lang === 'bn' ? 'ক্লায়েন্ট যোগ করুন' : 'Add Client'}</span>
+              </button>
+            )}
+
             <button
               onClick={onOpenNewTicketModal}
               className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs md:text-sm transition-all shadow-lg flex items-center gap-2 active:scale-95"
@@ -394,80 +472,244 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
         </div>
       </div>
 
-      {/* Main Navigation Tabs */}
-      <div className="flex flex-wrap border-b border-slate-200 mb-6 bg-white p-1 rounded-xl shadow-sm gap-1">
-        <button
-          onClick={() => setActiveTab('KPI_DASHBOARD')}
-          className={`flex-1 py-3 px-3 text-xs md:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${
-            activeTab === 'KPI_DASHBOARD'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          <BarChart2 className="w-4 h-4 text-emerald-300" />
-          <span>{lang === 'bn' ? 'কেপিআই ড্যাশবোর্ড' : 'KPI Dashboard'}</span>
-          <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/30 text-white font-mono font-bold">
-            Recharts
+      {/* Main Workspace Layout with Collapsable Sidebar Navigation */}
+      <div className="flex flex-col lg:flex-row gap-5 items-start relative min-h-[650px]">
+        
+        {/* Mobile Navigation Header Bar */}
+        <div className="lg:hidden w-full bg-slate-900 border border-slate-800 p-3 rounded-2xl flex items-center justify-between text-white shadow-md mb-2">
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+              className="p-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl transition-all border border-slate-700"
+              aria-label="Toggle navigation menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div>
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                {lang === 'bn' ? 'বর্তমান মডিউল:' : 'Active Module:'}
+              </span>
+              <span className="text-sm font-extrabold text-emerald-400">
+                {navItems.find(i => i.id === activeTab)?.[lang === 'bn' ? 'labelBn' : 'labelEn']}
+              </span>
+            </div>
+          </div>
+          <span className="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 font-mono border border-slate-700">
+            {activeTab}
           </span>
-        </button>
+        </div>
 
-        <button
-          onClick={() => setActiveTab('TICKETS')}
-          className={`flex-1 py-3 px-3 text-xs md:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${
-            activeTab === 'TICKETS'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+        {/* Collapsable Desktop Sidebar Menu */}
+        <aside
+          className={`hidden lg:flex flex-col bg-slate-900 border border-slate-800 rounded-2xl shadow-xl transition-all duration-300 ease-in-out shrink-0 sticky top-4 ${
+            isSidebarCollapsed ? 'w-20 p-3' : 'w-72 p-4'
           }`}
         >
-          <Layers className="w-4 h-4" />
-          <span>{lang === 'bn' ? 'সকল সাপোর্ট টিকেট' : 'All Support Tickets'}</span>
-          <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] bg-slate-900/20 text-white">
-            {tickets.length}
-          </span>
-        </button>
+          {/* Sidebar Header with Collapse Button */}
+          <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'} pb-3 mb-3 border-b border-slate-800/80`}>
+            {!isSidebarCollapsed && (
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <Sidebar className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-extrabold text-slate-200 uppercase tracking-wider font-syne">
+                    {lang === 'bn' ? 'ন্যাভিগেশন মেনু' : 'Navigation Menu'}
+                  </h3>
+                  <p className="text-[10px] text-slate-400">
+                    {lang === 'bn' ? 'শাখা মডিউল অপশন' : 'Workspace Modules'}
+                  </p>
+                </div>
+              </div>
+            )}
 
-        <button
-          onClick={() => setActiveTab('NOC_STAFF')}
-          className={`flex-1 py-3 px-3 text-xs md:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${
-            activeTab === 'NOC_STAFF'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          <span>{lang === 'bn' ? 'নোক টিম স্টাফ ডিউটি' : 'NOC Duty & Roster'}</span>
-          <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] bg-slate-900/20 text-white">
-            {nocStaff.length}
-          </span>
-        </button>
+            <button
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 rounded-xl transition-all border border-slate-700 active:scale-95"
+              title={isSidebarCollapsed ? 'Expand Sidebar Navigation' : 'Collapse Sidebar Navigation'}
+            >
+              {isSidebarCollapsed ? (
+                <PanelLeftOpen className="w-4 h-4 text-emerald-400" />
+              ) : (
+                <PanelLeftClose className="w-4 h-4 text-slate-400" />
+              )}
+            </button>
+          </div>
 
-        <button
-          onClick={() => setActiveTab('CLIENTS')}
-          className={`flex-1 py-3 px-3 text-xs md:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${
-            activeTab === 'CLIENTS'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          <FileText className="w-4 h-4" />
-          <span>{lang === 'bn' ? 'গ্রাহক রেকর্ড (CID)' : 'Client Records'}</span>
-          <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] bg-slate-900/20 text-white">
-            {clients.length}
-          </span>
-        </button>
+          {/* Navigation Items List */}
+          <nav className="space-y-1.5 flex-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              const label = lang === 'bn' ? item.labelBn : item.labelEn;
+              const desc = lang === 'bn' ? item.descriptionBn : item.descriptionEn;
 
-        <button
-          onClick={() => setActiveTab('BROADCAST')}
-          className={`flex-1 py-3 px-3 text-xs md:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${
-            activeTab === 'BROADCAST'
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          <Send className="w-4 h-4 text-emerald-200" />
-          <span>{lang === 'bn' ? 'হোয়াটসঅ্যাপ মেসেজ সেন্ড' : 'WhatsApp Dispatch'}</span>
-        </button>
-      </div>
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    setIsMobileSidebarOpen(false);
+                  }}
+                  title={isSidebarCollapsed ? label : undefined}
+                  className={`w-full group relative flex items-center ${
+                    isSidebarCollapsed ? 'justify-center py-3' : 'justify-between p-3'
+                  } rounded-xl font-medium text-xs transition-all ${
+                    isActive
+                      ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-950/40 border border-emerald-400/40 font-bold'
+                      : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/80'
+                  }`}
+                >
+                  <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
+                    <div className={`p-2 rounded-lg transition-colors ${
+                      isActive 
+                        ? 'bg-slate-950/40 text-white' 
+                        : 'bg-slate-800 text-slate-400 group-hover:text-emerald-400 group-hover:bg-slate-700/60'
+                    }`}>
+                      <Icon className="w-4 h-4 shrink-0" />
+                    </div>
+
+                    {!isSidebarCollapsed && (
+                      <div className="text-left overflow-hidden">
+                        <div className="font-extrabold truncate text-xs">{label}</div>
+                        <div className={`text-[10px] truncate ${isActive ? 'text-emerald-100' : 'text-slate-500'}`}>
+                          {desc}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {!isSidebarCollapsed && (
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold shrink-0 ${item.badgeClass}`}>
+                      {item.badge}
+                    </span>
+                  )}
+
+                  {isSidebarCollapsed && isActive && (
+                    <span className="absolute right-1 top-1 w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Collapsable Sidebar Bottom Quick Info & Toggle Hint */}
+          <div className="mt-4 pt-3 border-t border-slate-800/80">
+            {!isSidebarCollapsed ? (
+              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-xs space-y-2">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400 font-medium">
+                    {lang === 'bn' ? 'সাপোর্ট কুইক স্ট্যাটাস' : 'Quick NOC Status'}
+                  </span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                </div>
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className="text-amber-400 font-bold">{openCount} {lang === 'bn' ? 'পেন্ডিং' : 'Open'}</span>
+                  <span className="text-rose-400 font-bold">{emergencyLineCutsCount} {lang === 'bn' ? 'কাট' : 'Cuts'}</span>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsSidebarCollapsed(false)}
+                className="w-full py-2 flex items-center justify-center text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-xl transition-all"
+                title="Expand Navigation"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </aside>
+
+        {/* Mobile Overlay Drawer */}
+        <AnimatePresence>
+          {isMobileSidebarOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsMobileSidebarOpen(false)}
+                className="lg:hidden fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm"
+              />
+
+              <motion.div
+                initial={{ x: '-100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '-100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+                className="lg:hidden fixed top-0 left-0 bottom-0 z-50 w-72 bg-slate-900 border-r border-slate-800 p-4 shadow-2xl flex flex-col justify-between"
+              >
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <Sidebar className="w-5 h-5 text-emerald-400" />
+                      <h3 className="text-sm font-extrabold text-white">
+                        {lang === 'bn' ? 'ড্যাশবোর্ড ন্যাভিগেশন' : 'Dashboard Navigation'}
+                      </h3>
+                    </div>
+                    <button
+                      onClick={() => setIsMobileSidebarOpen(false)}
+                      className="p-1.5 bg-slate-800 text-slate-400 hover:text-white rounded-lg"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <nav className="space-y-2">
+                    {navItems.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = activeTab === item.id;
+                      const label = lang === 'bn' ? item.labelBn : item.labelEn;
+                      const desc = lang === 'bn' ? item.descriptionBn : item.descriptionEn;
+
+                      return (
+                        <button
+                          key={`mob-${item.id}`}
+                          onClick={() => {
+                            setActiveTab(item.id);
+                            setIsMobileSidebarOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between p-3 rounded-xl font-medium text-xs transition-all ${
+                            isActive
+                              ? 'bg-emerald-600 text-white shadow-md font-bold'
+                              : 'text-slate-300 hover:bg-slate-800'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Icon className="w-4 h-4 text-emerald-400" />
+                            <div className="text-left">
+                              <div className="font-extrabold">{label}</div>
+                              <div className="text-[10px] opacity-80">{desc}</div>
+                            </div>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${item.badgeClass}`}>
+                            {item.badge}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </nav>
+                </div>
+
+                <div className="pt-4 border-t border-slate-800">
+                  <button
+                    onClick={() => {
+                      setIsMobileSidebarOpen(false);
+                      if (onOpenNewTicketModal) onOpenNewTicketModal();
+                    }}
+                    className="w-full py-2.5 px-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>{lang === 'bn' ? 'ম্যানুয়াল টিকেট এন্ট্রি' : 'Create New Ticket'}</span>
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* Main Content Workspace */}
+        <main className="flex-1 min-w-0 w-full">
 
       {/* TAB 0: MANAGER KPI DASHBOARD (RECHARTS INTEGRATION) */}
       {activeTab === 'KPI_DASHBOARD' && (
@@ -1063,14 +1305,23 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
             <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
               {/* Search Input Engine */}
               <div className="relative w-full md:w-96">
-                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-emerald-600" />
                 <input
                   type="text"
-                  placeholder={lang === 'bn' ? 'টিকেট আইডি, CID, ফোন, নাম বা ইউনিয়ন খুঁজুন...' : 'Search ID, CID, Phone, Name, Union...'}
+                  placeholder={lang === 'bn' ? 'CID, টিকেট ID, ফোন বা গ্রাহকের নাম খুঁজুন...' : 'Search by CID, Client Name, Ticket ID...'}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2.5 text-xs md:text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 font-medium"
+                  className="w-full pl-10 pr-9 py-2.5 text-xs md:text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 font-medium text-slate-900 shadow-inner"
                 />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-xs font-bold w-4 h-4 flex items-center justify-center rounded-full bg-slate-200"
+                    title="Clear search"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
 
               {/* CSV Export & Filter Controls */}
@@ -1367,7 +1618,18 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="p-4 bg-slate-900 text-white font-bold text-sm flex items-center justify-between">
             <span>{lang === 'bn' ? 'মিঠাপুকুর ডেল্টা নেটওয়ার্ক সক্রিয় গ্রাহক তালিকা (CID Database)' : 'Active Delta Mithapukur CID Database'}</span>
-            <span className="text-xs font-normal text-slate-300">Total: {clients.length} Clients</span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-normal text-slate-300">Total: {clients.length} Clients</span>
+              {onOpenAddNewClient && (
+                <button
+                  onClick={onOpenAddNewClient}
+                  className="px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-lg flex items-center gap-1 transition-all shadow-sm active:scale-95"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>{lang === 'bn' ? 'ক্লায়েন্ট যোগ করুন' : 'Add Client'}</span>
+                </button>
+              )}
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs md:text-sm">
@@ -1535,6 +1797,8 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
           </form>
         </div>
       )}
+        </main>
+      </div>
 
       {/* Printable Optical Field Work Order Modal */}
       <WorkOrderModal
