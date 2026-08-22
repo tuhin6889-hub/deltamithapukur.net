@@ -1,6 +1,7 @@
 {
-  "short_name": "Delta NOC",
-  "name": "Delta Mithapukur ISP NOC & Support App",
+  "short_name": "Delta Ticket",
+  "name": "Delta Mithapukur Support Ticket Portal",
+  "description": "Delta Mithapukur ISP NOC & Customer Support Ticket Management Portal",
   "icons": [
     {
       "src": "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=192&auto=format&fit=crop&q=80",
@@ -14,9 +15,9 @@
     }
   ],
   "start_url": "/",
-  "background_color": "#090d16",
-  "theme_color": "#10b981",
+  "background_color": "#0a0a0c",
+  "theme_color": "#6366f1",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "categories": ["utilities", "productivity", "business"]
 }

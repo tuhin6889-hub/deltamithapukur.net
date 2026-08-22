@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Ticket, NocStaff, TicketStatus, TicketPriority } from '../types';
+import { TicketStatusBadge } from './TicketStatusBadge';
 import { 
   X, 
   Send, 
@@ -16,7 +18,8 @@ import {
   Clock,
   ShieldCheck,
   RefreshCw,
-  Home
+  Home,
+  Check
 } from 'lucide-react';
 
 interface TicketDetailModalProps {
@@ -70,7 +73,7 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
         {/* Top Header */}
         <div className="flex items-start justify-between border-b border-slate-100 pb-4">
           <div>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
               <span className="font-mono text-xs font-bold bg-slate-900 text-teal-300 px-2.5 py-0.5 rounded">
                 #{ticket.id}
               </span>
@@ -78,6 +81,9 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
                 {ticket.cid}
               </span>
               <span className="text-xs font-semibold text-slate-500">• {ticket.area}</span>
+
+              {/* Animated Status Indicator Badge */}
+              <TicketStatusBadge status={ticket.status} lang={lang} size="sm" />
             </div>
 
             <h2 className="text-xl font-extrabold text-slate-900">{ticket.title}</h2>
@@ -137,18 +143,19 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
         </div>
 
         {/* Controls Bar: Status & Assignee */}
-        <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-900 text-white rounded-2xl text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-slate-900 text-white rounded-2xl text-xs border border-slate-800">
           <div className="flex items-center gap-2">
-            <span className="text-slate-400">{lang === 'bn' ? 'স্ট্যাটাস:' : 'Status:'}</span>
+            <span className="text-slate-400 font-mono text-[11px]">{lang === 'bn' ? 'স্ট্যাটাস পরিবর্তন:' : 'Update Status:'}</span>
             <select
               value={ticket.status}
               onChange={(e) => onUpdateTicketStatus(ticket.id, e.target.value as TicketStatus)}
-              className="px-2.5 py-1 font-bold rounded-lg bg-slate-800 border border-slate-700 text-teal-300 focus:ring-2 focus:ring-teal-500"
+              className="px-2.5 py-1.5 font-bold rounded-xl bg-slate-800 border border-slate-700 text-teal-300 focus:ring-2 focus:ring-teal-500 cursor-pointer text-xs"
             >
               <option value="Open">Open (পেন্ডিং)</option>
               <option value="NOC_Assigned">NOC Assigned</option>
               <option value="In_Progress">In Progress (কাজ চলছে)</option>
               <option value="Resolved">Resolved (সমাধান)</option>
+              <option value="Closed">Closed (টিকেট বন্ধ)</option>
             </select>
           </div>
 

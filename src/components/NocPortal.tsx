@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Ticket, NocStaff, TicketStatus, TicketPriority } from '../types';
 import { DeltaLogo } from './DeltaLogo';
+import { TicketStatusBadge } from './TicketStatusBadge';
 import { 
   Cpu, 
   Activity, 
@@ -865,33 +867,38 @@ export const NocPortal: React.FC<NocPortalProps> = ({
                         )}
                       </div>
 
-                      {/* Interactive Status Selector */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">STATUS:</span>
-                        <select
-                          value={ticket.status}
-                          onChange={(e) => onUpdateTicketStatus(ticket.id, e.target.value as TicketStatus)}
-                          className={`px-3 py-1.5 text-xs font-bold rounded-xl border focus:ring-2 focus:ring-teal-500 focus:outline-none ${
-                            ticket.status === 'Resolved' 
-                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' 
-                              : ticket.status === 'In_Progress' 
-                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' 
-                              : 'bg-slate-950 text-slate-200 border-slate-700'
-                          }`}
-                        >
-                          <option value="Open">Open (পেন্ডিং)</option>
-                          <option value="NOC_Assigned">NOC Assigned</option>
-                          <option value="In_Progress">In Progress (কাজ চলছে)</option>
-                          <option value="Resolved">Resolved (সম্পন্ন)</option>
-                          <option value="Closed">Closed (বন্ধ)</option>
-                        </select>
+                      {/* Interactive Status Selector & Animated Badge */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <TicketStatusBadge status={ticket.status} lang={lang} size="sm" />
+
+                        <div className="relative">
+                          <select
+                            value={ticket.status}
+                            onChange={(e) => onUpdateTicketStatus(ticket.id, e.target.value as TicketStatus)}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-xl border focus:ring-2 focus:ring-teal-500 focus:outline-none cursor-pointer transition-all ${
+                              ticket.status === 'Resolved' 
+                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' 
+                                : ticket.status === 'Closed'
+                                ? 'bg-teal-500/20 text-teal-300 border-teal-500/40'
+                                : ticket.status === 'In_Progress' 
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' 
+                                : 'bg-slate-950 text-slate-200 border-slate-700'
+                            }`}
+                          >
+                            <option value="Open">Open (পেন্ডিং)</option>
+                            <option value="NOC_Assigned">NOC Assigned</option>
+                            <option value="In_Progress">In Progress (কাজ চলছে)</option>
+                            <option value="Resolved">Resolved (সম্পন্ন)</option>
+                            <option value="Closed">Closed (বন্ধ)</option>
+                          </select>
+                        </div>
 
                         <button
                           onClick={() => onSelectTicket(ticket)}
                           className="px-3 py-1.5 bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/40 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
                           title="Open Ticket Detail Modal"
                         >
-                          <span>{lang === 'bn' ? 'ডিটেইলস ওপেন করুন' : 'Open Details'}</span>
+                          <span>{lang === 'bn' ? 'ডিটেইলস' : 'Details'}</span>
                           <ChevronRight className="w-4 h-4 text-teal-400" />
                         </button>
                       </div>

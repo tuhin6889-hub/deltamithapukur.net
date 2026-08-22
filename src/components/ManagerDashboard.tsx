@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Ticket, ClientInfo, NocStaff, TicketStatus, TicketPriority, NotificationLog } from '../types';
 import { DeltaLogo } from './DeltaLogo';
 import { WorkOrderModal } from './WorkOrderModal';
+import { TicketStatusBadge } from './TicketStatusBadge';
 import { 
   CheckCircle2, 
   Clock, 
@@ -1484,25 +1485,30 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
 
                       {/* Status Tag & Single-Click Selector */}
                       <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
-                        <select
-                          value={ticket.status}
-                          onChange={(e) => onUpdateTicketStatus(ticket.id, e.target.value as TicketStatus)}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-extrabold focus:ring-2 focus:ring-emerald-500 cursor-pointer border ${
-                            ticket.status === 'Resolved'
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                              : ticket.status === 'In_Progress'
-                              ? 'bg-blue-50 text-blue-800 border-blue-300'
-                              : ticket.status === 'NOC_Assigned'
-                              ? 'bg-teal-50 text-teal-800 border-teal-300'
-                              : 'bg-amber-50 text-amber-800 border-amber-300'
-                          }`}
-                        >
-                          <option value="Open">Open (পেন্ডিং)</option>
-                          <option value="NOC_Assigned">NOC Assigned</option>
-                          <option value="In_Progress">In Progress (কাজ চলছে)</option>
-                          <option value="Resolved">Resolved (সমাধান)</option>
-                          <option value="Closed">Closed (বন্ধ)</option>
-                        </select>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <TicketStatusBadge status={ticket.status} lang={lang} size="sm" />
+                          <select
+                            value={ticket.status}
+                            onChange={(e) => onUpdateTicketStatus(ticket.id, e.target.value as TicketStatus)}
+                            className={`px-2 py-1 rounded-lg text-xs font-bold focus:ring-2 focus:ring-emerald-500 cursor-pointer border ${
+                              ticket.status === 'Resolved'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                : ticket.status === 'Closed'
+                                ? 'bg-teal-50 text-teal-800 border-teal-300'
+                                : ticket.status === 'In_Progress'
+                                ? 'bg-blue-50 text-blue-800 border-blue-300'
+                                : ticket.status === 'NOC_Assigned'
+                                ? 'bg-indigo-50 text-indigo-800 border-indigo-300'
+                                : 'bg-amber-50 text-amber-800 border-amber-300'
+                            }`}
+                          >
+                            <option value="Open">Open (পেন্ডিং)</option>
+                            <option value="NOC_Assigned">NOC Assigned</option>
+                            <option value="In_Progress">In Progress (কাজ চলছে)</option>
+                            <option value="Resolved">Resolved (সমাধান)</option>
+                            <option value="Closed">Closed (বন্ধ)</option>
+                          </select>
+                        </div>
                       </td>
 
                       {/* Lineman & Field Tech Dispatch selector */}

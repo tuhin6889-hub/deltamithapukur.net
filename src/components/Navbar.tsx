@@ -19,7 +19,8 @@ import {
   Database,
   UserPlus,
   Home,
-  ArrowLeft
+  ArrowLeft,
+  Mic
 } from 'lucide-react';
 
 interface StaffUser {
@@ -140,17 +141,36 @@ export const Navbar: React.FC<NavbarProps> = ({
             
             {/* Logged in Staff Badge & Logout Button */}
             {activeStaff && (
-              <div className="hidden xl:flex items-center gap-2 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700/80">
+              <div className="flex items-center gap-2 bg-slate-800/90 px-2.5 py-1.5 rounded-xl border border-slate-700">
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs font-bold text-slate-200 truncate max-w-[140px]">
+                <span className="text-xs font-bold text-slate-200 truncate max-w-[130px] hidden sm:inline">
                   {activeStaff.name}
                 </span>
                 <button
                   onClick={() => onStaffLogout(activeStaff.role)}
-                  className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-red-400 transition-colors"
-                  title="Log out"
+                  className="flex items-center gap-1 px-2 py-0.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 rounded-lg text-xs font-bold transition-colors cursor-pointer border border-rose-500/30"
+                  title="Log out back to Login Screen"
                 >
-                  <LogOut className="w-3.5 h-3.5" />
+                  <LogOut className="w-3 h-3" />
+                  <span className="hidden sm:inline">{lang === 'bn' ? 'লগআউট' : 'Logout'}</span>
+                </button>
+              </div>
+            )}
+
+            {/* Logged in Client Badge & Logout Button */}
+            {loggedInCid && (
+              <div className="flex items-center gap-2 bg-slate-800/90 px-2.5 py-1.5 rounded-xl border border-slate-700">
+                <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                <span className="text-xs font-mono font-bold text-indigo-300">
+                  {loggedInCid}
+                </span>
+                <button
+                  onClick={onClientLogout}
+                  className="flex items-center gap-1 px-2 py-0.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 rounded-lg text-xs font-bold transition-colors cursor-pointer border border-rose-500/30"
+                  title="Log out back to Login Screen"
+                >
+                  <LogOut className="w-3 h-3" />
+                  <span className="hidden sm:inline">{lang === 'bn' ? 'লগআউট' : 'Logout'}</span>
                 </button>
               </div>
             )}
@@ -251,13 +271,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {/* Submit Ticket Action Button */}
+            {/* Submit Ticket Action Button with Voice indicator */}
             <button
               onClick={onOpenNewTicketModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-xs transition-all shadow-md active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-xs transition-all shadow-md active:scale-95 group"
+              title={lang === 'bn' ? 'নতুন টিকেট খুলুন (ভয়েস ডিকটেশন সহ)' : 'Create New Ticket (Voice Enabled)'}
             >
               <PlusCircle className="w-4 h-4" />
               <span className="hidden sm:inline">{lang === 'bn' ? 'নতুন টিকেট' : 'New Ticket'}</span>
+              <span className="flex items-center gap-0.5 bg-emerald-600/30 px-1 py-0.5 rounded text-[10px] text-slate-950 font-mono">
+                <Mic className="w-3 h-3 text-slate-950" />
+              </span>
             </button>
 
           </div>

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { ClientInfo, Ticket, CommentItem } from '../types';
 import { DeltaLogo } from './DeltaLogo';
+import { TicketStatusBadge } from './TicketStatusBadge';
 import { 
   User, 
   Wifi, 
@@ -17,7 +19,8 @@ import {
   LogOut,
   ArrowRight,
   Sparkles,
-  Mail
+  Mail,
+  Mic
 } from 'lucide-react';
 
 interface ClientPortalProps {
@@ -271,10 +274,15 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={onOpenNewTicketModal}
-            className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs md:text-sm transition-all shadow-lg flex items-center gap-2 active:scale-95"
+            className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs md:text-sm transition-all shadow-lg flex items-center gap-2 active:scale-95 group"
+            title={lang === 'bn' ? 'নতুন টিকেট খুলুন (ভয়েস ডিকটেশন সহ)' : 'Open Support Ticket (Voice Enabled)'}
           >
             <PlusCircle className="w-4 h-4" />
             <span>{lang === 'bn' ? 'নতুন টিকেট খুলুন' : 'Open Support Ticket'}</span>
+            <span className="flex items-center gap-0.5 bg-emerald-600/30 px-1.5 py-0.5 rounded-md text-[10px] text-slate-950 font-mono font-bold">
+              <Mic className="w-3 h-3 text-slate-950" />
+              <span>Voice</span>
+            </span>
           </button>
 
           <button
@@ -333,57 +341,75 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                     <h3 className="text-lg font-bold text-slate-900">{ticket.title}</h3>
                   </div>
 
-                  <span className={`px-3 py-1 rounded-xl text-xs font-bold self-start sm:self-auto ${
-                    ticket.status === 'Resolved' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                  }`}>
-                    {ticket.status === 'Resolved' ? '✓ সমাধান হয়েছে (Resolved)' : `● ${ticket.status}`}
-                  </span>
+                  {/* Animated Ticket Status Badge */}
+                  <TicketStatusBadge status={ticket.status} lang={lang} size="md" />
                 </div>
 
                 {/* VISUAL TIMELINE PROGRESS BAR */}
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                  <p className="text-xs font-bold text-slate-600 mb-4">
-                    {lang === 'bn' ? 'টিকেট ট্র্যাকিং স্ট্যাটাস লাইভ টাইমলাইন:' : 'Ticket Resolution Timeline:'}
-                  </p>
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-xs font-bold text-slate-700">
+                      {lang === 'bn' ? 'টিকেট ট্র্যাকিং স্ট্যাটাস লাইভ টাইমলাইন:' : 'Ticket Resolution Timeline:'}
+                    </p>
+                    <span className="text-[11px] font-mono text-slate-500 font-medium">
+                      {ticket.status === 'Resolved' || ticket.status === 'Closed' ? '✓ Completed' : '● Live Tracking'}
+                    </span>
+                  </div>
                   
                   <div className="grid grid-cols-4 gap-2 text-center text-[11px] relative">
                     {/* Step 1 */}
                     <div className="space-y-1">
-                      <div className={`w-8 h-8 rounded-full mx-auto flex items-center justify-center font-bold text-xs ${
-                        currentStep >= 1 ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'
-                      }`}>
+                      <motion.div 
+                        animate={currentStep >= 1 ? { scale: [1, 1.06, 1] } : {}}
+                        transition={{ duration: 1.5, repeat: currentStep === 1 ? Infinity : 0, repeatDelay: 2 }}
+                        className={`w-8 h-8 rounded-full mx-auto flex items-center justify-center font-bold text-xs shadow-sm ${
+                          currentStep >= 1 ? 'bg-indigo-600 text-white shadow-indigo-200' : 'bg-slate-200 text-slate-500'
+                        }`}
+                      >
                         1
-                      </div>
+                      </motion.div>
                       <p className="font-bold text-slate-800">{lang === 'bn' ? 'টিকেট জমা' : 'Received'}</p>
                     </div>
 
                     {/* Step 2 */}
                     <div className="space-y-1">
-                      <div className={`w-8 h-8 rounded-full mx-auto flex items-center justify-center font-bold text-xs ${
-                        currentStep >= 2 ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'
-                      }`}>
+                      <motion.div 
+                        animate={currentStep >= 2 ? { scale: [1, 1.06, 1] } : {}}
+                        transition={{ duration: 1.5, repeat: currentStep === 2 ? Infinity : 0, repeatDelay: 2 }}
+                        className={`w-8 h-8 rounded-full mx-auto flex items-center justify-center font-bold text-xs shadow-sm ${
+                          currentStep >= 2 ? 'bg-indigo-600 text-white shadow-indigo-200' : 'bg-slate-200 text-slate-500'
+                        }`}
+                      >
                         2
-                      </div>
+                      </motion.div>
                       <p className="font-bold text-slate-800">{lang === 'bn' ? 'নোক রিভিউ' : 'NOC Review'}</p>
                     </div>
 
                     {/* Step 3 */}
                     <div className="space-y-1">
-                      <div className={`w-8 h-8 rounded-full mx-auto flex items-center justify-center font-bold text-xs ${
-                        currentStep >= 3 ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'
-                      }`}>
+                      <motion.div 
+                        animate={currentStep >= 3 ? { scale: [1, 1.08, 1] } : {}}
+                        transition={{ duration: 1.5, repeat: currentStep === 3 ? Infinity : 0, repeatDelay: 1.5 }}
+                        className={`w-8 h-8 rounded-full mx-auto flex items-center justify-center font-bold text-xs shadow-sm ${
+                          currentStep >= 3 ? 'bg-amber-500 text-slate-950 font-extrabold shadow-amber-200' : 'bg-slate-200 text-slate-500'
+                        }`}
+                      >
                         3
-                      </div>
+                      </motion.div>
                       <p className="font-bold text-slate-800">{lang === 'bn' ? 'কাজ চলছে' : 'In Progress'}</p>
                     </div>
 
                     {/* Step 4 */}
                     <div className="space-y-1">
-                      <div className={`w-8 h-8 rounded-full mx-auto flex items-center justify-center font-bold text-xs ${
-                        currentStep >= 4 ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-500'
-                      }`}>
+                      <motion.div 
+                        animate={currentStep >= 4 ? { scale: [1, 1.1, 1] } : {}}
+                        transition={{ duration: 1.2, repeat: 0 }}
+                        className={`w-8 h-8 rounded-full mx-auto flex items-center justify-center font-bold text-xs shadow-sm ${
+                          currentStep >= 4 ? 'bg-emerald-600 text-white shadow-emerald-200' : 'bg-slate-200 text-slate-500'
+                        }`}
+                      >
                         4
-                      </div>
+                      </motion.div>
                       <p className="font-bold text-slate-800">{lang === 'bn' ? 'সমাধান' : 'Resolved'}</p>
                     </div>
                   </div>

@@ -1,6 +1,6 @@
 {
   "name": "Delta Mithapukur Support Ticket Portal",
   "description": "Comprehensive Support Ticket Dashboard & NOC Portal for Delta Mithapukur ISP with Client CID Login, Branch Manager Control, WhatsApp & Email Alerts, AI Diagnostics, and Android Mobile App Mode.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

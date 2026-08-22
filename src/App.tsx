@@ -12,6 +12,7 @@ import {
 } from './types';
 import { INITIAL_CLIENTS, INITIAL_NOC_STAFF, INITIAL_TICKETS, INITIAL_NOTIFICATIONS } from './data/mockData';
 import { StaffLoginForm } from './components/StaffLoginForm';
+import { UnifiedLoginPage } from './components/UnifiedLoginPage';
 import { Navbar } from './components/Navbar';
 import { ManagerDashboard } from './components/ManagerDashboard';
 import { NocPortal } from './components/NocPortal';
@@ -26,32 +27,29 @@ import { ClientDatabaseModal } from './components/ClientDatabaseModal';
 import { NewClientModal } from './components/NewClientModal';
 import { AndroidInstallModal } from './components/AndroidInstallModal';
 import { StaffToolbar } from './components/StaffToolbar';
+import { StatusFeedbackToast, StatusFeedbackData } from './components/StatusFeedbackToast';
 
 export default function App() {
   const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS);
   const [clients, setClients] = useState<ClientInfo[]>(INITIAL_CLIENTS);
   const [nocStaff] = useState<NocStaff[]>(INITIAL_NOC_STAFF);
   const [notifications, setNotifications] = useState<NotificationLog[]>(INITIAL_NOTIFICATIONS);
+  const [statusFeedback, setStatusFeedback] = useState<StatusFeedbackData | null>(null);
 
   // Application Modes
   const [currentRole, setCurrentRole] = useState<UserRole>('NOC');
   const [deviceMode, setDeviceMode] = useState<DeviceMode>('DESKTOP');
   const [lang, setLang] = useState<'bn' | 'en'>('bn');
 
-  // Client Session State
-  const [loggedInCid, setLoggedInCid] = useState<string | null>('CID-1001');
+  // Client Session State (Default null for 1st page login)
+  const [loggedInCid, setLoggedInCid] = useState<string | null>(null);
 
-  // Staff Session State (Manager & NOC)
-  const [managerUser, setManagerUser] = useState<{ username: string; name: string; role: 'MANAGER' } | null>({
-    username: 'manager',
-    name: 'ব্রাঞ্চ ম্যানেজার (Mithapukur HQ)',
-    role: 'MANAGER',
-  });
-  const [nocUser, setNocUser] = useState<{ username: string; name: string; role: 'NOC' } | null>({
-    username: 'noc',
-    name: 'ইঞ্জি: তানজিম আহমেদ (NOC Core)',
-    role: 'NOC',
-  });
+  // Staff Session State (Default null for 1st page login)
+  const [managerUser, setManagerUser] = useState<{ username: string; name: string; role: 'MANAGER' } | null>(null);
+  const [nocUser, setNocUser] = useState<{ username: string; name: string; role: 'NOC' } | null>(null);
+
+  // Check if any user is authenticated in the current session
+  const isAnyUserLoggedIn = Boolean(loggedInCid || managerUser || nocUser);
 
   // Employee check: Returns true if active session is a logged-in Manager or NOC engineer
   const isEmployee = (currentRole === 'MANAGER' && managerUser !== null) || (currentRole === 'NOC' && nocUser !== null);
@@ -72,6 +70,12 @@ export default function App() {
     } else {
       setNocUser(null);
     }
+  };
+
+  const handleGlobalLogout = () => {
+    setLoggedInCid(null);
+    setManagerUser(null);
+    setNocUser(null);
   };
 
   // Modals
@@ -107,6 +111,8 @@ export default function App() {
   // Update Status Action
   const handleUpdateTicketStatus = (ticketId: string, status: TicketStatus) => {
     const targetTicket = tickets.find(t => t.id === ticketId);
+    const previousStatus = targetTicket?.status;
+
     setTickets(prev => prev.map(t => {
       if (t.id === ticketId) {
         const updated = {
@@ -129,6 +135,16 @@ export default function App() {
       }
       return t;
     }));
+
+    // Trigger subtle Framer Motion status update visual feedback toast
+    setStatusFeedback({
+      ticketId,
+      status,
+      previousStatus,
+      title: targetTicket?.title || `Ticket #${ticketId}`,
+      clientName: targetTicket?.clientName,
+      timestamp: Date.now(),
+    });
 
     // Trigger Outbound Notification API to Client & Manager (WhatsApp & Email)
     handleSendManualNotification(
@@ -192,8 +208,9 @@ export default function App() {
     }));
   };
 
-  // Rating Ticket
+  // Rating Ticket (Closes ticket)
   const handleRateTicket = (ticketId: string, rating: number, feedback: string) => {
+    const targetTicket = tickets.find(t => t.id === ticketId);
     setTickets(prev => prev.map(t => {
       if (t.id === ticketId) {
         const updated = {
@@ -208,6 +225,16 @@ export default function App() {
       }
       return t;
     }));
+
+    // Trigger Framer Motion visual feedback for Closed ticket
+    setStatusFeedback({
+      ticketId,
+      status: 'Closed',
+      previousStatus: targetTicket?.status,
+      title: targetTicket?.title || `Ticket #${ticketId}`,
+      clientName: targetTicket?.clientName,
+      timestamp: Date.now(),
+    });
   };
 
   // Manual / Auto Dispatch Notification (Calls backend API)
@@ -542,6 +569,26 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // 1st Page: Show Unified Login Page if no user is authenticated
+  if (!isAnyUserLoggedIn) {
+    return (
+      <div className="min-h-screen bg-slate-950 font-sans antialiased text-slate-900 selection:bg-emerald-500 selection:text-slate-950">
+        <UnifiedLoginPage
+          clients={clients}
+          onClientLogin={(cid) => {
+            setLoggedInCid(cid);
+            setCurrentRole('CLIENT');
+          }}
+          onStaffLogin={(user) => {
+            handleStaffLogin(user);
+          }}
+          lang={lang}
+          onToggleLang={() => setLang(prev => prev === 'bn' ? 'en' : 'bn')}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 font-sans antialiased text-slate-900 selection:bg-emerald-500 selection:text-slate-950">
       
@@ -664,6 +711,17 @@ export default function App() {
       />
 
       <StaffToolbar isEmployee={isEmployee} />
+
+      {/* Floating Status Feedback Toast (Framer Motion Animation) */}
+      <StatusFeedbackToast
+        feedback={statusFeedback}
+        onDismiss={() => setStatusFeedback(null)}
+        onViewTicket={(ticketId) => {
+          const t = tickets.find(item => item.id === ticketId);
+          if (t) setSelectedTicket(t);
+        }}
+        lang={lang}
+      />
 
     </div>
   );
