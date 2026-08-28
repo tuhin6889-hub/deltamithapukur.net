@@ -24,12 +24,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.ClientInfo
 import com.example.model.UserRole
+import com.example.ui.dialogs.DownloadCounterBadge
 import com.example.ui.theme.*
 
 @Composable
 fun LoginScreen(
     clients: List<ClientInfo>,
     isBengali: Boolean,
+    downloadCount: Int = 1428,
+    onOpenInstallModal: () -> Unit = {},
     onClientLogin: (String) -> Unit,
     onManagerLogin: (String, String) -> Unit,
     onNocLogin: (String, String) -> Unit
@@ -114,6 +117,99 @@ fun LoginScreen(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("01700-000000", fontSize = 11.sp, color = TextSecondary)
                         }
+                    }
+                }
+            }
+        }
+
+        // Android APK Download Counter Banner
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpenInstallModal() }
+                    .testTag("card_apk_download_banner"),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+                border = CardDefaults.outlinedCardBorder().copy(
+                    brush = Brush.horizontalGradient(
+                        listOf(EmeraldSuccess.copy(alpha = 0.5f), IndigoPrimary.copy(alpha = 0.5f))
+                    )
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFF064E3B)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Android,
+                                contentDescription = "Android APK",
+                                tint = EmeraldSuccess,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = if (isBengali) "অ্যান্ড্রয়েড অ্যাপ (.APK)" else "Android App (.APK)",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = Color.White
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    color = IndigoPrimary,
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = "v2.4.0",
+                                        color = Color.White,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(3.dp))
+                            DownloadCounterBadge(
+                                downloadCount = downloadCount,
+                                isBengali = isBengali
+                            )
+                        }
+                    }
+                    Button(
+                        onClick = onOpenInstallModal,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = EmeraldSuccess,
+                            contentColor = Color.Black
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.testTag("btn_open_install_modal")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = if (isBengali) "ইনস্টল" else "Install",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
                     }
                 }
             }

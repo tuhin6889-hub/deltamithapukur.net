@@ -151,11 +151,13 @@ fun AppTopBar(
     currentRole: UserRole?,
     activeUserName: String?,
     isBengali: Boolean,
+    downloadCount: Int = 1428,
     onToggleLang: () -> Unit,
     onOpenNotifications: () -> Unit,
     onOpenWhatsAppCenter: () -> Unit,
     onOpenEmailCenter: () -> Unit,
     onOpenClientDb: () -> Unit,
+    onOpenInstallModal: () -> Unit,
     onLogout: () -> Unit
 ) {
     TopAppBar(
@@ -219,6 +221,34 @@ fun AppTopBar(
             }
         },
         actions = {
+            // APK Download Modal Action Button with Live Downloads counter badge
+            IconButton(
+                onClick = onOpenInstallModal,
+                modifier = Modifier.testTag("action_install_modal")
+            ) {
+                BadgedBox(
+                    badge = {
+                        Badge(
+                            containerColor = EmeraldSuccess,
+                            contentColor = Color.Black
+                        ) {
+                            Text(
+                                text = "APK",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Android,
+                        contentDescription = "Download APK",
+                        tint = EmeraldSuccess,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+
             if (currentRole != null) {
                 // Quick Action buttons
                 if (currentRole == UserRole.MANAGER || currentRole == UserRole.NOC) {
@@ -292,6 +322,19 @@ fun AppTopBar(
                         contentDescription = "Logout",
                         tint = RoseError,
                         modifier = Modifier.size(20.dp)
+                    )
+                }
+            } else {
+                // Lang toggle on login screen
+                TextButton(
+                    onClick = onToggleLang,
+                    modifier = Modifier.testTag("toggle_lang_btn_guest")
+                ) {
+                    Text(
+                        text = if (isBengali) "বাং" else "EN",
+                        color = CyanAccent,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
                     )
                 }
             }

@@ -53,8 +53,18 @@ class MainActivity : ComponentActivity() {
                 var showWhatsAppDialog by remember { mutableStateOf(false) }
                 var showEmailDialog by remember { mutableStateOf(false) }
                 var showNotificationsDialog by remember { mutableStateOf(false) }
+                var showInstallModal by remember { mutableStateOf(false) }
+                var downloadCount by remember { mutableIntStateOf(1428) }
                 var workOrderTicketId by remember { mutableStateOf<String?>(null) }
                 var isAiLoading by remember { mutableStateOf(false) }
+
+                // Simulated dynamic mock APK download counter progression
+                LaunchedEffect(Unit) {
+                    while (true) {
+                        kotlinx.coroutines.delay(35000)
+                        downloadCount += (1..3).random()
+                    }
+                }
 
                 val coroutineScope = rememberCoroutineScope()
 
@@ -77,11 +87,13 @@ class MainActivity : ComponentActivity() {
                             currentRole = currentRole,
                             activeUserName = activeUserName,
                             isBengali = isBengali,
+                            downloadCount = downloadCount,
                             onToggleLang = { isBengali = !isBengali },
                             onOpenNotifications = { showNotificationsDialog = true },
                             onOpenWhatsAppCenter = { showWhatsAppDialog = true },
                             onOpenEmailCenter = { showEmailDialog = true },
                             onOpenClientDb = { showClientDbDialog = true },
+                            onOpenInstallModal = { showInstallModal = true },
                             onLogout = {
                                 currentRole = null
                                 activeCid = null
@@ -102,6 +114,8 @@ class MainActivity : ComponentActivity() {
                                 LoginScreen(
                                     clients = clients,
                                     isBengali = isBengali,
+                                    downloadCount = downloadCount,
+                                    onOpenInstallModal = { showInstallModal = true },
                                     onClientLogin = { inputCidOrPhone ->
                                         val matched = clients.find {
                                             it.cid.equals(inputCidOrPhone, ignoreCase = true) ||
@@ -349,6 +363,18 @@ class MainActivity : ComponentActivity() {
                         ticket = activeWorkOrderTicket!!,
                         isBengali = isBengali,
                         onDismiss = { workOrderTicketId = null }
+                    )
+                }
+
+                // Android APK Install Modal with Dynamic Download Counter Badge
+                if (showInstallModal) {
+                    AndroidInstallModal(
+                        downloadCount = downloadCount,
+                        isBengali = isBengali,
+                        onDismiss = { showInstallModal = false },
+                        onDownloadTriggered = {
+                            downloadCount++
+                        }
                     )
                 }
             }
