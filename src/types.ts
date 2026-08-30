@@ -73,6 +73,30 @@ export interface NocStaff {
   status: 'On Duty' | 'On Field' | 'Off Duty';
   activeTickets: number;
   completedToday: number;
+  avgResponseTimeMin?: number;
+  totalResolvedMonth?: number;
+  slaAdherenceRate?: number;
+  rating?: number;
+}
+
+export interface StaffPerformanceMetric {
+  staffId: string;
+  staffName: string;
+  shortName: string;
+  designation: string;
+  area: string;
+  status: 'On Duty' | 'On Field' | 'Off Duty';
+  avgResponseTimeMin: number;
+  avgResolutionTimeMin: number;
+  ticketsClosed: number;
+  ticketsActive: number;
+  urgentResolved: number;
+  slaComplianceRate: number;
+  customerRating: number;
+  productivityScore: number;
+  badge?: string;
+  weeklyHistory: { day: string; closed: number; avgResponseMin: number }[];
+  categoryBreakdown: { category: string; count: number }[];
 }
 
 export interface NotificationLog {

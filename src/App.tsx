@@ -309,6 +309,77 @@ export default function App() {
     );
   };
 
+  // Bulk Update Status Action for Multiple Tickets Simultaneously
+  const handleBulkUpdateTicketStatus = (ticketIds: string[], status: TicketStatus, assignedNoc?: string) => {
+    if (!ticketIds.length) return;
+
+    const idSet = new Set(ticketIds);
+    const now = new Date().toISOString();
+    const roleAuthor = currentRole === 'MANAGER' ? 'ব্রাঞ্চ ম্যানেজার' : currentRole === 'NOC' ? 'নোক টিম' : 'Staff';
+    const roleName = currentRole === 'MANAGER' ? 'Manager' : 'NOC';
+
+    setTickets(prev => prev.map(t => {
+      if (idSet.has(t.id)) {
+        const updated = {
+          ...t,
+          status,
+          ...(assignedNoc !== undefined && assignedNoc !== '' ? { assignedNoc } : {}),
+          updatedDate: now,
+          comments: [
+            ...t.comments,
+            {
+              id: `c_bulk_${Date.now()}_${t.id}`,
+              author: roleAuthor,
+              role: roleName as any,
+              text: `[বাল্ক অ্যাকশন]: স্ট্যাটাস পরিবর্তন -> ${status}${assignedNoc ? ` | টেকনিশিয়ান: ${assignedNoc}` : ''}`,
+              timestamp: now,
+            }
+          ]
+        };
+        if (selectedTicket?.id === t.id) setSelectedTicket(updated);
+        return updated;
+      }
+      return t;
+    }));
+
+    // Trigger subtle status feedback toast
+    setStatusFeedback({
+      type: status === 'Resolved' || status === 'Closed' ? 'RESOLVED' : 'AUTO_AI',
+      title: lang === 'bn' ? `${ticketIds.length} টি টিকেটের স্ট্যাটাস আপডেট সফল` : `Bulk Updated ${ticketIds.length} Tickets`,
+      message: lang === 'bn' 
+        ? `নির্বাচিত ${ticketIds.length} টি টিকেট একযোগে '${status}' স্ট্যাটাসে পরিবর্তিত হয়েছে।` 
+        : `Successfully updated ${ticketIds.length} tickets to '${status}'.`,
+      status,
+      ticketId: ticketIds.join(', '),
+      timestamp: Date.now(),
+    });
+
+    // Offline queueing
+    if (!isOnline || isSimulatedOffline) {
+      ticketIds.forEach(ticketId => {
+        queueOfflineAction({
+          type: 'UPDATE_STATUS',
+          payload: { ticketId, status, ...(assignedNoc ? { assignedNoc } : {}) },
+          description: `Bulk Status -> ${status} (#${ticketId})`,
+        });
+      });
+      setQueuedActionsCount(prev => prev + ticketIds.length);
+    }
+
+    // Outbound notifications for affected tickets
+    ticketIds.forEach(id => {
+      const target = tickets.find(t => t.id === id);
+      if (target) {
+        handleSendManualNotification(
+          id,
+          target.cid,
+          `টিকেট #${id} এর বর্তমান স্ট্যাটাস একযোগে আপডেট করা হয়েছে: ${status}`,
+          'WhatsApp'
+        );
+      }
+    });
+  };
+
   // Assign NOC Staff Action
   const handleAssignNocStaff = (ticketId: string, staffName: string) => {
     setTickets(prev => prev.map(t => {
@@ -673,6 +744,7 @@ export default function App() {
           lang={lang}
           onSelectTicket={(ticket) => setSelectedTicket(ticket)}
           onUpdateTicketStatus={handleUpdateTicketStatus}
+          onBulkUpdateTicketStatus={handleBulkUpdateTicketStatus}
           onAssignNocStaff={handleAssignNocStaff}
           onSendManualNotification={handleSendManualNotification}
           onOpenNewTicketModal={() => setIsNewTicketModalOpen(true)}
@@ -704,6 +776,7 @@ export default function App() {
           lang={lang}
           onSelectTicket={(ticket) => setSelectedTicket(ticket)}
           onUpdateTicketStatus={handleUpdateTicketStatus}
+          onBulkUpdateTicketStatus={handleBulkUpdateTicketStatus}
           onAddComment={handleAddComment}
           onTriggerAiDiagnosis={handleTriggerAiDiagnosis}
           aiLoadingTicketId={aiLoadingTicketId}

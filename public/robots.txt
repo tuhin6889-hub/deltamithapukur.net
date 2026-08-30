@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Allow: /client
+Allow: /tickets
+Allow: /noc
+Allow: /manager
+Allow: /servers
+Allow: /diagnostics
+Allow: /notifications
+
+Sitemap: https://deltamithapukur.com/sitemap.xml

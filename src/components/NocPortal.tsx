@@ -28,7 +28,12 @@ import {
   Search,
   ArrowUpRight,
   Gauge,
-  LogOut
+  LogOut,
+  CheckSquare,
+  Square,
+  ListChecks,
+  X,
+  Users
 } from 'lucide-react';
 
 interface NocPortalProps {
@@ -37,6 +42,7 @@ interface NocPortalProps {
   lang: 'bn' | 'en';
   onSelectTicket: (ticket: Ticket) => void;
   onUpdateTicketStatus: (ticketId: string, status: TicketStatus) => void;
+  onBulkUpdateTicketStatus?: (ticketIds: string[], status: TicketStatus, assignedNoc?: string) => void;
   onAddComment: (ticketId: string, text: string) => void;
   onTriggerAiDiagnosis: (ticket: Ticket) => Promise<void>;
   aiLoadingTicketId: string | null;
@@ -50,6 +56,7 @@ export const NocPortal: React.FC<NocPortalProps> = ({
   lang,
   onSelectTicket,
   onUpdateTicketStatus,
+  onBulkUpdateTicketStatus,
   onAddComment,
   onTriggerAiDiagnosis,
   aiLoadingTicketId,
@@ -60,6 +67,10 @@ export const NocPortal: React.FC<NocPortalProps> = ({
   const [activeNocFilter, setActiveNocFilter] = useState<'ALL' | 'MINE' | 'URGENT' | 'IN_PROGRESS' | 'RESOLVED'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPonPort, setSelectedPonPort] = useState<number | null>(null);
+
+  // Bulk Ticket Selection State
+  const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
+  const [bulkStaffAssign, setBulkStaffAssign] = useState<string>('');
 
   // Live Clock
   const [timeString, setTimeString] = useState('');
@@ -170,6 +181,54 @@ export const NocPortal: React.FC<NocPortalProps> = ({
     }
     return true;
   });
+
+  // Bulk Action Helpers
+  const toggleSelectTicket = (ticketId: string) => {
+    setSelectedTicketIds(prev =>
+      prev.includes(ticketId) ? prev.filter(id => id !== ticketId) : [...prev, ticketId]
+    );
+  };
+
+  const handleSelectAllFiltered = () => {
+    const visibleIds = filteredTickets.map(t => t.id);
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedTicketIds.includes(id));
+
+    if (allVisibleSelected) {
+      setSelectedTicketIds(prev => prev.filter(id => !visibleIds.includes(id)));
+    } else {
+      setSelectedTicketIds(prev => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedTicketIds([]);
+    setBulkStaffAssign('');
+  };
+
+  const handleBulkStatusChange = (status: TicketStatus) => {
+    if (selectedTicketIds.length === 0) return;
+    if (onBulkUpdateTicketStatus) {
+      onBulkUpdateTicketStatus(selectedTicketIds, status, bulkStaffAssign || undefined);
+    } else {
+      selectedTicketIds.forEach(id => onUpdateTicketStatus(id, status));
+    }
+    setSelectedTicketIds([]);
+    setBulkStaffAssign('');
+  };
+
+  const handleBulkAssignStaff = (staffName: string) => {
+    if (selectedTicketIds.length === 0 || !staffName) return;
+    if (onBulkUpdateTicketStatus) {
+      onBulkUpdateTicketStatus(selectedTicketIds, 'NOC_Assigned', staffName);
+    } else {
+      selectedTicketIds.forEach(id => onUpdateTicketStatus(id, 'NOC_Assigned'));
+    }
+    setSelectedTicketIds([]);
+    setBulkStaffAssign('');
+  };
+
+  const isAllFilteredSelected = filteredTickets.length > 0 && filteredTickets.every(t => selectedTicketIds.includes(t.id));
+  const isSomeFilteredSelected = filteredTickets.some(t => selectedTicketIds.includes(t.id)) && !isAllFilteredSelected;
 
   const handleSendComment = (ticketId: string) => {
     const text = commentTextMap[ticketId];
@@ -728,6 +787,90 @@ export const NocPortal: React.FC<NocPortalProps> = ({
               </button>
             </div>
 
+            {/* Bulk Selection Master Bar */}
+            <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-950/60 p-3 rounded-2xl border border-slate-800">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleSelectAllFiltered}
+                  className="flex items-center gap-2 text-xs font-bold text-slate-300 hover:text-white transition-colors cursor-pointer select-none group"
+                >
+                  <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
+                    isAllFilteredSelected 
+                      ? 'bg-teal-500 border-teal-400 text-slate-950 shadow-sm' 
+                      : isSomeFilteredSelected
+                      ? 'bg-teal-900 border-teal-500 text-teal-300'
+                      : 'bg-slate-900 border-slate-700 text-transparent group-hover:border-slate-500'
+                  }`}>
+                    {isAllFilteredSelected ? (
+                      <Check className="w-3 h-3 stroke-[3]" />
+                    ) : isSomeFilteredSelected ? (
+                      <span className="w-2 h-0.5 bg-teal-300 rounded-full" />
+                    ) : null}
+                  </div>
+                  <span>
+                    {isAllFilteredSelected 
+                      ? (lang === 'bn' ? 'সব আনসিলেক্ট করুন' : 'Deselect All') 
+                      : (lang === 'bn' ? `বর্তমান তালিকার সব সিলেক্ট (${filteredTickets.length})` : `Select All Visible (${filteredTickets.length})`)}
+                  </span>
+                </button>
+
+                {selectedTicketIds.length > 0 && (
+                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/40 animate-pulse">
+                    {selectedTicketIds.length} {lang === 'bn' ? 'টিকেট নির্বাচিত' : 'Selected'}
+                  </span>
+                )}
+              </div>
+
+              {selectedTicketIds.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] text-slate-400 font-mono hidden md:inline">
+                    {lang === 'bn' ? 'একযোগে আপডেট:' : 'Bulk Action:'}
+                  </span>
+                  
+                  <button
+                    onClick={() => handleBulkStatusChange('In_Progress')}
+                    className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1 active:scale-95"
+                    title="Set status to In Progress for all selected"
+                  >
+                    <span>⚡</span>
+                    <span>{lang === 'bn' ? 'কাজ চলছে' : 'In Progress'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleBulkStatusChange('Resolved')}
+                    className="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1 active:scale-95"
+                    title="Set status to Resolved for all selected"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>{lang === 'bn' ? 'সমাধান' : 'Resolve'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleBulkStatusChange('Closed')}
+                    className="px-2.5 py-1 bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/40 rounded-lg text-xs font-bold transition-all flex items-center gap-1 active:scale-95"
+                    title="Set status to Closed for all selected"
+                  >
+                    <span>🔒</span>
+                    <span>{lang === 'bn' ? 'বন্ধ' : 'Close'}</span>
+                  </button>
+
+                  <button
+                    onClick={handleClearSelection}
+                    className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
+                    title="Clear Selection"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{lang === 'bn' ? 'মুছুন' : 'Clear'}</span>
+                  </button>
+                </div>
+              ) : (
+                <span className="text-[11px] text-slate-500 font-mono italic">
+                  {lang === 'bn' ? 'চেকবক্সে ক্লিক করে একসাথে একাধিক টিকেট আপডেট করুন' : 'Select tickets to perform bulk status updates'}
+                </span>
+              )}
+            </div>
+
           </div>
 
           {/* Ticket Stream List */}
@@ -763,21 +906,42 @@ export const NocPortal: React.FC<NocPortalProps> = ({
               filteredTickets.map((ticket) => {
                 const isLos = ticket.priority === 'Urgent' || ticket.category.includes('LOS') || ticket.category.includes('ফাইবার');
                 const priorityConfig = getPriorityColorConfig(ticket.priority);
+                const isSelected = selectedTicketIds.includes(ticket.id);
 
                 return (
                   <div 
                     key={ticket.id} 
                     className={`bg-slate-900/90 rounded-3xl p-5 md:p-6 border shadow-xl transition-all relative overflow-hidden space-y-4 ${
-                      ticket.priority === 'Urgent' 
+                      isSelected
+                        ? 'ring-2 ring-teal-400 border-teal-500/80 bg-gradient-to-br from-slate-900 via-teal-950/20 to-slate-900 shadow-[0_0_30px_rgba(20,184,166,0.2)]'
+                        : ticket.priority === 'Urgent' 
                         ? 'border-l-[6px] border-l-rose-500 border-rose-800/50 bg-gradient-to-br from-slate-900 via-slate-900 to-rose-950/20 shadow-[inset_4px_0_20px_rgba(244,63,94,0.08)]' 
                         : ticket.priority === 'High' 
                         ? 'border-l-[6px] border-l-yellow-400 border-yellow-800/40 bg-gradient-to-br from-slate-900 via-slate-900 to-yellow-950/15 shadow-[inset_4px_0_20px_rgba(234,179,8,0.06)]' 
                         : 'border-l-[6px] border-l-blue-500 border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950/15 shadow-[inset_4px_0_20px_rgba(59,130,246,0.06)]'
                     }`}
                   >
-                    {/* Top Priority Visual Indicator Pill Strip for NOC Scanning */}
+                    {/* Top Priority Visual Indicator & Selection Checkbox Strip */}
                     <div className="flex items-center justify-between text-[11px] font-mono pb-2 border-b border-slate-800/60">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
+                        {/* Interactive Bulk Select Checkbox */}
+                        <label 
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-2 cursor-pointer select-none group/check"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectTicket(ticket.id)}
+                            className="w-4 h-4 rounded text-teal-500 bg-slate-950 border-slate-700 focus:ring-teal-500 cursor-pointer accent-teal-500"
+                          />
+                          <span className={`text-[11px] font-bold transition-colors ${isSelected ? 'text-teal-300' : 'text-slate-400 group-hover/check:text-slate-200'}`}>
+                            {isSelected ? (lang === 'bn' ? '✓ নির্বাচিত' : '✓ Selected') : (lang === 'bn' ? 'সিলেক্ট' : 'Select')}
+                          </span>
+                        </label>
+
+                        <span className="text-slate-700">|</span>
+
                         <span className={`w-2 h-2 rounded-full ${priorityConfig.dotColor} ${priorityConfig.isPulsing ? 'animate-ping' : ''}`} />
                         <span className={`font-bold px-2 py-0.5 rounded-md ${priorityConfig.pillColorDark}`}>
                           {priorityConfig.name === 'Urgent' ? '🔴 RED / URGENT' : priorityConfig.name === 'High' ? '🟡 YELLOW / HIGH' : '🔵 BLUE / NORMAL'}
@@ -999,6 +1163,118 @@ export const NocPortal: React.FC<NocPortalProps> = ({
         </div>
 
       </div>
+
+      {/* Floating Bulk Operations Command Bar */}
+      <AnimatePresence>
+        {selectedTicketIds.length > 0 && (
+          <motion.div
+            initial={{ y: 80, opacity: 0, scale: 0.95 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: 80, opacity: 0, scale: 0.95 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-5xl bg-slate-900/95 border-2 border-teal-500/70 shadow-[0_10px_40px_rgba(0,0,0,0.8),0_0_30px_rgba(20,184,166,0.35)] backdrop-blur-2xl rounded-2xl p-3.5 md:p-4 text-white flex flex-col md:flex-row items-center justify-between gap-3"
+          >
+            {/* Left Info & Counter */}
+            <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+              <div className="flex items-center gap-2">
+                <span className="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-300 border border-teal-500/40 flex items-center justify-center font-bold">
+                  <ListChecks className="w-4 h-4" />
+                </span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-sm text-white">
+                      {selectedTicketIds.length} {lang === 'bn' ? 'টিকেট নির্বাচিত' : 'Tickets Selected'}
+                    </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-800 text-slate-300">
+                      NOC Bulk Action
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    {lang === 'bn' ? 'এক ক্লিকে সকল নির্বাচিত টিকেটে কার্যকর করুন' : 'Simultaneous action for all selected queue items'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleClearSelection}
+                className="md:hidden p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                title="Cancel selection"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Middle & Right Controls */}
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+              {/* Fast Status Update Buttons */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  onClick={() => handleBulkStatusChange('In_Progress')}
+                  className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+                >
+                  <span>⚡</span>
+                  <span>{lang === 'bn' ? 'কাজ চলছে' : 'In Progress'}</span>
+                </button>
+
+                <button
+                  onClick={() => handleBulkStatusChange('Resolved')}
+                  className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-extrabold transition-all flex items-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  <span>{lang === 'bn' ? 'সমাধান (Resolve All)' : 'Resolve All'}</span>
+                </button>
+
+                <button
+                  onClick={() => handleBulkStatusChange('Closed')}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                >
+                  <span>🔒</span>
+                  <span>{lang === 'bn' ? 'বন্ধ (Close)' : 'Close'}</span>
+                </button>
+
+                <button
+                  onClick={() => handleBulkStatusChange('Open')}
+                  className="px-2.5 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer"
+                  title="Reopen all selected"
+                >
+                  <span>🔄 Open</span>
+                </button>
+              </div>
+
+              {/* Lineman / Staff Dispatch Selector */}
+              <div className="flex items-center gap-1.5 pl-2 border-l border-slate-800">
+                <select
+                  value={bulkStaffAssign}
+                  onChange={(e) => {
+                    const staff = e.target.value;
+                    setBulkStaffAssign(staff);
+                    if (staff) {
+                      handleBulkAssignStaff(staff);
+                    }
+                  }}
+                  className="px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-700 bg-slate-950 text-teal-300 focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                >
+                  <option value="">{lang === 'bn' ? '👥 টেকনিশিয়ান অ্যাসাইন...' : '👥 Bulk Assign Staff...'}</option>
+                  {nocStaff.map(s => (
+                    <option key={s.id} value={s.name}>
+                      {s.name} ({s.zone}) {s.onDuty ? '🟢 On-Duty' : '⚪ Off-Duty'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Desktop Clear button */}
+              <button
+                onClick={handleClearSelection}
+                className="hidden md:flex p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors items-center justify-center ml-1 cursor-pointer"
+                title={lang === 'bn' ? 'সিলেকশন বাতিল করুন' : 'Clear selection'}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

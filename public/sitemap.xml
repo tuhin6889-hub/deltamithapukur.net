@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+  <!-- Main Unified Portal & Landing -->
+  <url>
+    <loc>https://deltamithapukur.com/</loc>
+    <lastmod>2026-08-30</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Client Support & CID Ticket Portal -->
+  <url>
+    <loc>https://deltamithapukur.com/client</loc>
+    <lastmod>2026-08-30</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Ticket Status Tracker & Search -->
+  <url>
+    <loc>https://deltamithapukur.com/tickets</loc>
+    <lastmod>2026-08-30</lastmod>
+    <changefreq>always</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- NOC Engineering & Optical Line Monitoring Portal -->
+  <url>
+    <loc>https://deltamithapukur.com/noc</loc>
+    <lastmod>2026-08-30</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Manager & Operations Management Dashboard -->
+  <url>
+    <loc>https://deltamithapukur.com/manager</loc>
+    <lastmod>2026-08-30</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Network Server & Fiber Infrastructure Status -->
+  <url>
+    <loc>https://deltamithapukur.com/servers</loc>
+    <lastmod>2026-08-30</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- AI NOC Diagnostics & Self-Healing Support -->
+  <url>
+    <loc>https://deltamithapukur.com/diagnostics</loc>
+    <lastmod>2026-08-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Inbound Email & WhatsApp Alert Center -->
+  <url>
+    <loc>https://deltamithapukur.com/notifications</loc>
+    <lastmod>2026-08-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+</urlset>

@@ -8,8 +8,10 @@ import { TicketStatusBadge } from './TicketStatusBadge';
 import { TicketPriorityBadge, getPriorityColorConfig } from './TicketPriorityBadge';
 import { NetworkServerManager } from './NetworkServerManager';
 import { MonthSummaryAnalytics } from './MonthSummaryAnalytics';
+import { NocStaffPerformanceDashboard } from './NocStaffPerformanceDashboard';
 import { 
   CheckCircle2, 
+  Check,
   Clock, 
   AlertTriangle, 
   Users, 
@@ -74,6 +76,7 @@ interface ManagerDashboardProps {
   lang: 'bn' | 'en';
   onSelectTicket: (ticket: Ticket) => void;
   onUpdateTicketStatus: (ticketId: string, status: TicketStatus) => void;
+  onBulkUpdateTicketStatus?: (ticketIds: string[], status: TicketStatus, assignedNoc?: string) => void;
   onAssignNocStaff: (ticketId: string, staffName: string) => void;
   onSendManualNotification: (ticketId: string, cid: string, message: string, channel: 'WhatsApp' | 'Email' | 'SMS') => void;
   onOpenNewTicketModal: () => void;
@@ -94,6 +97,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   lang,
   onSelectTicket,
   onUpdateTicketStatus,
+  onBulkUpdateTicketStatus,
   onAssignNocStaff,
   onSendManualNotification,
   onOpenNewTicketModal,
@@ -104,9 +108,14 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   currentUser,
   onLogout,
 }) => {
-  const [activeTab, setActiveTab] = useState<'KPI_DASHBOARD' | 'TICKETS' | 'NOC_STAFF' | 'CLIENTS' | 'SERVERS' | 'BROADCAST'>('KPI_DASHBOARD');
+  const [activeTab, setActiveTab] = useState<'KPI_DASHBOARD' | 'TICKETS' | 'NOC_PERFORMANCE' | 'NOC_STAFF' | 'CLIENTS' | 'SERVERS' | 'BROADCAST'>('KPI_DASHBOARD');
+  const [nocStaffSubView, setNocStaffSubView] = useState<'ROSTER' | 'PERFORMANCE'>('PERFORMANCE');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Bulk Ticket Selection State
+  const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
+  const [bulkManagerStaffAssign, setBulkManagerStaffAssign] = useState<string>('');
 
   // Network Servers State
   const [serversList, setServersList] = useState<NetworkServer[]>(servers);
@@ -136,6 +145,16 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
       badgeClass: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
       descriptionBn: 'ISP নেটওয়ার্ক এনালাইটিক্স',
       descriptionEn: 'Network analytics & trends',
+    },
+    {
+      id: 'NOC_PERFORMANCE' as const,
+      labelBn: 'নোক পারফরম্যান্স মেট্রিক',
+      labelEn: 'NOC Staff Performance',
+      icon: Award,
+      badge: 'Metrics',
+      badgeClass: 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30',
+      descriptionBn: 'গড় রেসপন্স টাইম ও টিকেট ক্লোজ',
+      descriptionEn: 'Response time & closed tickets',
     },
     {
       id: 'TICKETS' as const,
@@ -391,6 +410,56 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
 
     return matchesSearch && matchesArea && matchesCategory && matchesStatus && matchesPriority;
   });
+
+  // Bulk Action Helpers for Manager Dashboard
+  const toggleSelectTicket = (ticketId: string) => {
+    setSelectedTicketIds(prev =>
+      prev.includes(ticketId) ? prev.filter(id => id !== ticketId) : [...prev, ticketId]
+    );
+  };
+
+  const handleSelectAllFiltered = () => {
+    const visibleIds = filteredTickets.map(t => t.id);
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedTicketIds.includes(id));
+
+    if (allVisibleSelected) {
+      setSelectedTicketIds(prev => prev.filter(id => !visibleIds.includes(id)));
+    } else {
+      setSelectedTicketIds(prev => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedTicketIds([]);
+    setBulkManagerStaffAssign('');
+  };
+
+  const handleBulkStatusChange = (status: TicketStatus) => {
+    if (selectedTicketIds.length === 0) return;
+    if (onBulkUpdateTicketStatus) {
+      onBulkUpdateTicketStatus(selectedTicketIds, status, bulkManagerStaffAssign || undefined);
+    } else {
+      selectedTicketIds.forEach(id => onUpdateTicketStatus(id, status));
+    }
+    setSelectedTicketIds([]);
+    setBulkManagerStaffAssign('');
+  };
+
+  const handleBulkAssignStaff = (staffName: string) => {
+    if (selectedTicketIds.length === 0 || !staffName) return;
+    if (onBulkUpdateTicketStatus) {
+      onBulkUpdateTicketStatus(selectedTicketIds, 'NOC_Assigned', staffName);
+    } else {
+      selectedTicketIds.forEach(id => {
+        onAssignNocStaff(id, staffName);
+      });
+    }
+    setSelectedTicketIds([]);
+    setBulkManagerStaffAssign('');
+  };
+
+  const isAllFilteredSelected = filteredTickets.length > 0 && filteredTickets.every(t => selectedTicketIds.includes(t.id));
+  const isSomeFilteredSelected = filteredTickets.some(t => selectedTicketIds.includes(t.id)) && !isAllFilteredSelected;
 
   const handleSendBroadcast = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1340,32 +1409,46 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
 
           </div>
 
-          {/* NOC Duty Response SLA Index Breakdown */}
+          {/* NOC Duty Response SLA Index Breakdown & Drilldown */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-emerald-600" />
-                <h3 className="text-base font-extrabold text-slate-900 font-syne">
-                  {lang === 'bn' ? 'নোক টিম রেসপন্স পারফরম্যান্স ইনডেক্স' : 'NOC Team Response SLA Index'}
-                </h3>
+                <Users className="w-5 h-5 text-indigo-600" />
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 font-syne">
+                    {lang === 'bn' ? 'নোক টিম রেসপন্স ও স্টাফ পারফরম্যান্স ওভারভিউ' : 'NOC Team Response & Staff Performance'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {lang === 'bn' ? 'গড় রেসপন্স সময়, দৈনিক সমাধান এবং লাইভ এসএলএ ইনডেক্স' : 'Avg ticket response time, completed jobs, and live SLA index'}
+                  </p>
+                </div>
               </div>
-              <span className="text-xs text-slate-500 font-mono">
-                Real-time ISP Field Metrics
-              </span>
+              
+              <button
+                onClick={() => setActiveTab('NOC_PERFORMANCE')}
+                className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all border border-indigo-200 shadow-xs"
+              >
+                <Award className="w-4 h-4 text-indigo-600" />
+                <span>{lang === 'bn' ? 'সম্পূর্ণ পারফরম্যান্স ড্যাশবোর্ড ➔' : 'Open Full Performance Dashboard ➔'}</span>
+              </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
               {nocStaff.map(staff => (
-                <div key={staff.id} className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1.5">
+                <div 
+                  key={staff.id} 
+                  onClick={() => setActiveTab('NOC_PERFORMANCE')}
+                  className="p-3.5 bg-slate-50 hover:bg-indigo-50/40 rounded-xl border border-slate-200/80 space-y-1.5 cursor-pointer transition-all hover:border-indigo-200"
+                >
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900">{staff.name}</span>
+                    <span className="font-bold text-slate-900 truncate">{staff.name}</span>
                     <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-bold">
-                      98.4% SLA
+                      {staff.slaAdherenceRate ? `${staff.slaAdherenceRate}%` : '98.4%'} SLA
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500">{staff.designation}</p>
+                  <p className="text-[11px] text-slate-500 truncate">{staff.designation}</p>
                   <div className="pt-1 flex items-center justify-between font-mono text-[11px] text-slate-700">
-                    <span>Avg First Contact: <strong className="text-emerald-700">11.2 min</strong></span>
+                    <span>Avg Resp: <strong className="text-emerald-700">{staff.avgResponseTimeMin ? `${staff.avgResponseTimeMin}m` : '12.4m'}</strong></span>
                     <span>Done: <strong>{staff.completedToday}</strong></span>
                   </div>
                 </div>
@@ -1514,6 +1597,28 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
               <table className="w-full text-left text-xs md:text-sm">
                 <thead className="bg-slate-900 text-slate-200 text-xs uppercase tracking-wider">
                   <tr>
+                    <th className="py-3.5 px-3 text-center w-12">
+                      <button
+                        type="button"
+                        onClick={handleSelectAllFiltered}
+                        className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                        title={isAllFilteredSelected ? "Deselect all" : "Select all visible"}
+                      >
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
+                          isAllFilteredSelected 
+                            ? 'bg-emerald-500 border-emerald-400 text-slate-950 shadow-sm' 
+                            : isSomeFilteredSelected
+                            ? 'bg-emerald-900 border-emerald-500 text-emerald-300'
+                            : 'bg-slate-800 border-slate-600 text-transparent'
+                        }`}>
+                          {isAllFilteredSelected ? (
+                            <Check className="w-3 h-3 stroke-[3]" />
+                          ) : isSomeFilteredSelected ? (
+                            <span className="w-2 h-0.5 bg-emerald-300 rounded-full" />
+                          ) : null}
+                        </div>
+                      </button>
+                    </th>
                     <th className="py-3.5 px-4 font-semibold">{lang === 'bn' ? 'টিকেট আইডি ও সময়' : 'Ticket ID & Date'}</th>
                     <th className="py-3.5 px-4 font-semibold">{lang === 'bn' ? 'গ্রাহক (CID) ও ফোন' : 'Subscriber CID & Phone'}</th>
                     <th className="py-3.5 px-4 font-semibold">{lang === 'bn' ? 'সমস্যার বিবরণ' : 'Issue Summary'}</th>
@@ -1526,18 +1631,31 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
                 <tbody className="divide-y divide-slate-200">
                   {filteredTickets.map((ticket) => {
                     const priorityConfig = getPriorityColorConfig(ticket.priority);
+                    const isSelected = selectedTicketIds.includes(ticket.id);
 
                     return (
                       <tr 
                         key={ticket.id} 
                         className={`transition-colors group ${
-                          ticket.priority === 'Urgent'
+                          isSelected
+                            ? 'bg-emerald-50/80 border-l-4 border-l-emerald-600'
+                            : ticket.priority === 'Urgent'
                             ? 'border-l-4 border-l-rose-500 bg-rose-50/30 hover:bg-rose-50/60'
                             : ticket.priority === 'High'
                             ? 'border-l-4 border-l-yellow-400 bg-yellow-50/30 hover:bg-yellow-50/60'
                             : 'border-l-4 border-l-blue-500 bg-blue-50/15 hover:bg-blue-50/40'
                         }`}
                       >
+                        {/* Row Selection Checkbox */}
+                        <td className="py-3.5 px-3 text-center" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectTicket(ticket.id)}
+                            className="w-4 h-4 rounded text-emerald-600 bg-white border-slate-300 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+                          />
+                        </td>
+
                         {/* Ticket ID & Time */}
                         <td className="py-3.5 px-4">
                           <div className="font-bold text-slate-900 font-mono flex items-center gap-1.5">
@@ -1658,7 +1776,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
 
                   {filteredTickets.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="py-12 text-center text-slate-500">
+                      <td colSpan={8} className="py-12 text-center text-slate-500">
                         <AlertTriangle className="w-8 h-8 text-slate-400 mx-auto mb-2" />
                         <p className="font-semibold">{lang === 'bn' ? 'কোন টিকেট পাওয়া যায়নি' : 'No tickets matching search criteria'}</p>
                       </td>
@@ -1668,57 +1786,224 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
               </table>
             </div>
           </div>
+
+          {/* Floating Bulk Operations Command Bar for Manager */}
+          <AnimatePresence>
+            {selectedTicketIds.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 40, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 40, scale: 0.96 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[94%] max-w-4xl bg-slate-950/95 backdrop-blur-md border border-slate-700/80 text-white rounded-2xl shadow-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4"
+              >
+                {/* Selected Counter & Clear */}
+                <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-slate-950 font-black text-xs">
+                      {selectedTicketIds.length}
+                    </span>
+                    <div>
+                      <p className="text-xs font-bold text-slate-200">
+                        {lang === 'bn' ? 'টিকেট নির্বাচিত হয়েছে' : 'Tickets Selected'}
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        {lang === 'bn' ? 'বাল্ক অ্যাকশন প্রয়োগ করুন' : 'Apply bulk action simultaneously'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleClearSelection}
+                    className="text-xs text-slate-400 hover:text-rose-400 px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+                  >
+                    {lang === 'bn' ? 'বাতিল' : 'Deselect All'}
+                  </button>
+                </div>
+
+                {/* Bulk Status & Assignment Controls */}
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+                  {/* Bulk Assign Staff Selector */}
+                  <div className="flex items-center gap-1.5 bg-slate-900 px-2.5 py-1.5 rounded-xl border border-slate-700 text-xs">
+                    <span className="text-slate-400 text-[11px] font-medium hidden sm:inline">
+                      {lang === 'bn' ? 'নোক স্কোয়াড:' : 'Assign:'}
+                    </span>
+                    <select
+                      value={bulkManagerStaffAssign}
+                      onChange={(e) => {
+                        setBulkManagerStaffAssign(e.target.value);
+                        if (e.target.value) {
+                          handleBulkAssignStaff(e.target.value);
+                        }
+                      }}
+                      className="bg-transparent text-emerald-400 font-bold focus:outline-none cursor-pointer text-xs"
+                    >
+                      <option value="" className="bg-slate-900 text-slate-400">
+                        {lang === 'bn' ? 'লাইনম্যান নির্বাচন...' : 'Select Squad...'}
+                      </option>
+                      {nocStaff.map(staff => (
+                        <option key={staff.id} value={`${staff.name} (${staff.id})`} className="bg-slate-900 text-slate-200">
+                          {staff.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Bulk Status Buttons */}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleBulkStatusChange('In_Progress')}
+                      className="px-3 py-1.5 rounded-xl bg-blue-600/90 hover:bg-blue-600 text-white text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1"
+                    >
+                      <Activity className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'ইন-প্রোগ্রেস' : 'In Progress'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleBulkStatusChange('Resolved')}
+                      className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? 'সমাধান (Resolved)' : 'Resolve'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleBulkStatusChange('Closed')}
+                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-600 text-xs font-bold transition-all shadow-sm active:scale-95"
+                    >
+                      {lang === 'bn' ? 'ক্লোজড' : 'Close'}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
-      {/* TAB 2: NOC STAFF ROSTER */}
+      {/* TAB: NOC STAFF PERFORMANCE METRICS (DEDICATED FULL VIEW) */}
+      {activeTab === 'NOC_PERFORMANCE' && (
+        <NocStaffPerformanceDashboard
+          nocStaff={nocStaff}
+          tickets={tickets}
+          lang={lang}
+        />
+      )}
+
+      {/* TAB 2: NOC STAFF ROSTER & PERFORMANCE VIEW */}
       {activeTab === 'NOC_STAFF' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {nocStaff.map((staff) => (
-            <div key={staff.id} className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm relative overflow-hidden">
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-100 text-slate-700 rounded font-bold">
-                    {staff.id}
-                  </span>
-                  <h3 className="font-bold text-slate-900 text-base mt-2">{staff.name}</h3>
-                  <p className="text-xs text-emerald-700 font-medium">{staff.designation}</p>
-                </div>
-
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                  staff.status === 'On Duty'
-                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                    : staff.status === 'On Field'
-                    ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                    : 'bg-slate-100 text-slate-600'
-                }`}>
-                  ● {staff.status}
-                </span>
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-slate-100 space-y-2 text-xs text-slate-600">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{staff.area}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Phone className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="font-mono">{staff.phone}</span>
-                </div>
-              </div>
-
-              <div className="mt-4 pt-3 bg-slate-50 rounded-lg p-3 flex items-center justify-between text-xs">
-                <div>
-                  <span className="text-slate-500 block">{lang === 'bn' ? 'এক্টিভ টিকেট' : 'Active'}</span>
-                  <span className="font-bold text-slate-900 text-sm">{staff.activeTickets}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">{lang === 'bn' ? 'আজ সম্পন্ন' : 'Completed'}</span>
-                  <span className="font-bold text-emerald-600 text-sm">{staff.completedToday}</span>
-                </div>
-              </div>
+        <div className="space-y-6">
+          {/* Sub-view Switcher Bar */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900 font-syne flex items-center gap-2">
+                <Users className="w-5 h-5 text-indigo-600" />
+                <span>{lang === 'bn' ? 'নোক ফিল্ড টিম ও ইঞ্জিনিয়ারিং ম্যানেজমেন্ট' : 'NOC Field Team & Engineering Management'}</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {lang === 'bn' 
+                  ? 'ইঞ্জিনিয়ারদের লাইভ অন-ডিউটি স্ট্যাটাস, কর্মক্ষমতা ও পারফরম্যান্স কেপিআই মেট্রিক্স' 
+                  : 'Live duty status, active ticket allocation, and individual performance KPIs'}
+              </p>
             </div>
-          ))}
+
+            <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 border border-slate-200">
+              <button
+                onClick={() => setNocStaffSubView('PERFORMANCE')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  nocStaffSubView === 'PERFORMANCE'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Award className="w-3.5 h-3.5" />
+                <span>{lang === 'bn' ? '📊 পারফরম্যান্স ও কেপিআই (Metrics)' : '📊 Performance & KPIs'}</span>
+              </button>
+              <button
+                onClick={() => setNocStaffSubView('ROSTER')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  nocStaffSubView === 'ROSTER'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>{lang === 'bn' ? '👥 ডিউটি রোস্টার কার্ড (Roster Cards)' : '👥 Duty Roster Cards'}</span>
+              </button>
+            </div>
+          </div>
+
+          {nocStaffSubView === 'PERFORMANCE' ? (
+            <NocStaffPerformanceDashboard
+              nocStaff={nocStaff}
+              tickets={tickets}
+              lang={lang}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {nocStaff.map((staff) => (
+                <div key={staff.id} className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm relative overflow-hidden flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-100 text-slate-700 rounded font-bold">
+                          {staff.id}
+                        </span>
+                        <h3 className="font-bold text-slate-900 text-base mt-2">{staff.name}</h3>
+                        <p className="text-xs text-emerald-700 font-medium">{staff.designation}</p>
+                      </div>
+
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                        staff.status === 'On Duty'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : staff.status === 'On Field'
+                          ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        ● {staff.status}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-slate-100 space-y-2 text-xs text-slate-600">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{staff.area}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="font-mono">{staff.phone}</span>
+                      </div>
+                      {staff.avgResponseTimeMin && (
+                        <div className="flex items-center gap-2 font-mono text-[11px] text-slate-700">
+                          <Clock className="w-3.5 h-3.5 text-indigo-500" />
+                          <span>Avg Response: <strong>{staff.avgResponseTimeMin}m</strong></span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-3 bg-slate-50 rounded-lg p-3 flex items-center justify-between text-xs border border-slate-100">
+                    <div>
+                      <span className="text-slate-500 block text-[11px]">{lang === 'bn' ? 'এক্টিভ টিকেট' : 'Active'}</span>
+                      <span className="font-bold text-slate-900 text-sm font-mono">{staff.activeTickets}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[11px]">{lang === 'bn' ? 'আজ সম্পন্ন' : 'Completed'}</span>
+                      <span className="font-bold text-emerald-600 text-sm font-mono">{staff.completedToday}</span>
+                    </div>
+                    {staff.rating && (
+                      <div className="text-right">
+                        <span className="text-slate-500 block text-[11px]">{lang === 'bn' ? 'রেটিং' : 'Rating'}</span>
+                        <span className="font-bold text-amber-600 text-sm font-mono flex items-center gap-0.5 justify-end">
+                          ★ {staff.rating}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
