@@ -1,6 +1,7 @@
 import React from 'react';
 import { Ticket } from '../types';
 import { DeltaLogo } from './DeltaLogo';
+import { TicketPriorityBadge } from './TicketPriorityBadge';
 import { X, Printer, Wrench, ShieldAlert, CheckSquare, MapPin, Phone, User, Radio, FileText } from 'lucide-react';
 
 interface WorkOrderModalProps {
@@ -70,9 +71,9 @@ export const WorkOrderModal: React.FC<WorkOrderModalProps> = ({
                 WORK ORDER #{ticket.id}
               </div>
               <p className="text-xs text-slate-500 font-mono">Date: {new Date().toLocaleDateString('en-GB')}</p>
-              <p className="text-xs font-bold text-rose-700 uppercase tracking-wider mt-1">
-                Priority: {ticket.priority}
-              </p>
+              <div className="mt-1 flex justify-end">
+                <TicketPriorityBadge priority={ticket.priority} lang={lang} size="xs" theme="light" />
+              </div>
             </div>
           </div>
 

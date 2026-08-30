@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ClientInfo, Ticket, CommentItem } from '../types';
 import { DeltaLogo } from './DeltaLogo';
 import { TicketStatusBadge } from './TicketStatusBadge';
+import { TicketPriorityBadge } from './TicketPriorityBadge';
 import { 
   User, 
   Wifi, 
@@ -327,7 +328,16 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
             if (ticket.status === 'Resolved' || ticket.status === 'Closed') currentStep = 4;
 
             return (
-              <div key={ticket.id} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-5">
+              <div 
+                key={ticket.id} 
+                className={`bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-5 ${
+                  ticket.priority === 'Urgent' 
+                    ? 'border-l-[5px] border-l-rose-500' 
+                    : ticket.priority === 'High' 
+                    ? 'border-l-[5px] border-l-yellow-400' 
+                    : 'border-l-[5px] border-l-blue-500'
+                }`}
+              >
                 
                 {/* Header Info */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
@@ -341,8 +351,11 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
                     <h3 className="text-lg font-bold text-slate-900">{ticket.title}</h3>
                   </div>
 
-                  {/* Animated Ticket Status Badge */}
-                  <TicketStatusBadge status={ticket.status} lang={lang} size="md" />
+                  {/* Priority & Status Badges */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <TicketPriorityBadge priority={ticket.priority} lang={lang} size="sm" theme="light" />
+                    <TicketStatusBadge status={ticket.status} lang={lang} size="md" />
+                  </div>
                 </div>
 
                 {/* VISUAL TIMELINE PROGRESS BAR */}

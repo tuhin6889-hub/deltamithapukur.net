@@ -87,3 +87,35 @@ export interface NotificationLog {
   timestamp: string;
   status: 'Delivered' | 'Sent';
 }
+
+export type NetworkServerType = 'OLT' | 'MikroTik' | 'Core_Router' | 'Switch' | 'Radius_Server';
+
+export interface NetworkServer {
+  id: string;
+  name: string;
+  type: NetworkServerType;
+  model: string;
+  ipAddress: string;
+  port: number;
+  winboxPort?: number;
+  apiPort?: number;
+  username?: string;
+  password?: string;
+  adminGroup?: string;
+  radiusSecret?: string;
+  locationArea: string;
+  vlan?: string;
+  status: 'Online' | 'Warning' | 'Offline';
+  uptime?: string;
+  cpuUsage?: number; // e.g. 18%
+  memoryUsage?: number; // e.g. 42%
+  totalPonPorts?: number;
+  activePonPorts?: number;
+  totalClientsOnline?: number;
+  temperature?: string; // e.g. "41°C"
+  firmwareVersion?: string;
+  lastPingMs?: number;
+  notes?: string;
+  addedDate: string;
+}
+

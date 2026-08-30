@@ -8,9 +8,23 @@ import {
   NotificationLog, 
   TicketStatus, 
   TicketPriority, 
-  TicketCategory 
+  TicketCategory,
+  NetworkServer
 } from './types';
-import { INITIAL_CLIENTS, INITIAL_NOC_STAFF, INITIAL_TICKETS, INITIAL_NOTIFICATIONS } from './data/mockData';
+import { INITIAL_CLIENTS, INITIAL_NOC_STAFF, INITIAL_TICKETS, INITIAL_NOTIFICATIONS, INITIAL_SERVERS } from './data/mockData';
+import { 
+  loadCachedTickets, 
+  saveCachedTickets, 
+  loadCachedClients, 
+  saveCachedClients, 
+  loadCachedServers, 
+  saveCachedServers, 
+  loadCachedNotifications, 
+  saveCachedNotifications,
+  queueOfflineAction,
+  loadOfflineQueue,
+  clearOfflineQueue
+} from './utils/offlineStorage';
 import { StaffLoginForm } from './components/StaffLoginForm';
 import { UnifiedLoginPage } from './components/UnifiedLoginPage';
 import { Navbar } from './components/Navbar';
@@ -27,14 +41,138 @@ import { ClientDatabaseModal } from './components/ClientDatabaseModal';
 import { NewClientModal } from './components/NewClientModal';
 import { AndroidInstallModal } from './components/AndroidInstallModal';
 import { StaffToolbar } from './components/StaffToolbar';
+import { Footer } from './components/Footer';
 import { StatusFeedbackToast, StatusFeedbackData } from './components/StatusFeedbackToast';
+import { WifiOff, Database, RefreshCw, Radio } from 'lucide-react';
 
 export default function App() {
-  const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS);
-  const [clients, setClients] = useState<ClientInfo[]>(INITIAL_CLIENTS);
+  // Load state from local storage cache if available
+  const [tickets, setTickets] = useState<Ticket[]>(() => loadCachedTickets(INITIAL_TICKETS));
+  const [clients, setClients] = useState<ClientInfo[]>(() => loadCachedClients(INITIAL_CLIENTS));
   const [nocStaff] = useState<NocStaff[]>(INITIAL_NOC_STAFF);
-  const [notifications, setNotifications] = useState<NotificationLog[]>(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<NotificationLog[]>(() => loadCachedNotifications(INITIAL_NOTIFICATIONS));
+  const [servers, setServers] = useState<NetworkServer[]>(() => loadCachedServers(INITIAL_SERVERS));
   const [statusFeedback, setStatusFeedback] = useState<StatusFeedbackData | null>(null);
+
+  // Real-time Network Connectivity & Offline Cache State
+  const [isOnline, setIsOnline] = useState<boolean>(() => typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [isSimulatedOffline, setIsSimulatedOffline] = useState<boolean>(false);
+  const [queuedActionsCount, setQueuedActionsCount] = useState<number>(() => loadOfflineQueue().length);
+
+  // Auto-persist datasets to localStorage cache whenever they mutate
+  useEffect(() => {
+    saveCachedTickets(tickets);
+  }, [tickets]);
+
+  useEffect(() => {
+    saveCachedClients(clients);
+  }, [clients]);
+
+  useEffect(() => {
+    saveCachedServers(servers);
+  }, [servers]);
+
+  useEffect(() => {
+    saveCachedNotifications(notifications);
+  }, [notifications]);
+
+  // Online / Offline Network Listeners
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      const queue = loadOfflineQueue();
+      if (queue.length > 0) {
+        clearOfflineQueue();
+        setQueuedActionsCount(0);
+        setStatusFeedback({
+          type: 'RESOLVED',
+          title: lang === 'bn' ? 'সংযোগ পুনরুদ্ধার ও অফলাইন ডাটা সিঙ্কড' : 'Connection Restored & Synced',
+          message: lang === 'bn' 
+            ? `${queue.length} টি অফলাইন পরিবর্তন সফলভাবে ক্লাউড সার্ভারে সিঙ্ক হয়েছে।`
+            : `Successfully synced ${queue.length} offline operations to server.`,
+        });
+      } else {
+        setStatusFeedback({
+          type: 'RESOLVED',
+          title: lang === 'bn' ? 'অনলাইন সংযোগ সক্রিয়' : 'Connection Online',
+          message: lang === 'bn' ? 'রিয়েল-টাইম ক্লাউড সিঙ্ক্রোনাইজেশন চালু আছে।' : 'Live cloud synchronization active.',
+        });
+      }
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      setStatusFeedback({
+        type: 'FAILED',
+        title: lang === 'bn' ? 'অফলাইন মোড সক্রিয়' : 'Offline Mode Active',
+        message: lang === 'bn' 
+          ? 'সংযোগ বিচ্ছিন্ন। সাম্প্রতিক টিকেট ও সাবস্ক্রাইবার ডাটা লোকাল ক্যাশ থেকে প্রদর্শিত হচ্ছে।' 
+          : 'Network offline. Recent tickets and clients are safely loaded from local cache.',
+      });
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const handleToggleSimulateOffline = () => {
+    setIsSimulatedOffline(prev => {
+      const next = !prev;
+      setStatusFeedback({
+        type: next ? 'AUTO_AI' : 'RESOLVED',
+        title: next 
+          ? (lang === 'bn' ? 'সিমুলেটেড অফলাইন মোড চালু' : 'Simulated Offline Mode Enabled') 
+          : (lang === 'bn' ? 'সাধারণ অনলাইন মোডে ফিরতি' : 'Switched to Online Mode'),
+        message: next
+          ? (lang === 'bn' ? 'এখন লোকাল ক্যাশ ও অফলাইন ফলব্যাক টেস্ট করা যাবে।' : 'App is now acting as offline. Data is read & written to local cache.')
+          : (lang === 'bn' ? 'স্বাভাবিক নেটওয়ার্ক মোড সক্রিয়।' : 'Back to normal live network mode.'),
+      });
+      return next;
+    });
+  };
+
+  const handleManualSync = () => {
+    clearOfflineQueue();
+    setQueuedActionsCount(0);
+    setStatusFeedback({
+      type: 'RESOLVED',
+      title: lang === 'bn' ? 'ক্যাশ সফলভাবে সিঙ্ক হয়েছে' : 'Cache Synced Successfully',
+      message: lang === 'bn' 
+        ? `${tickets.length} টি টিকেট ও ${clients.length} টি ক্লায়েন্ট ডাটা লোকাল স্টোরেজে সংরক্ষিত হয়েছে।` 
+        : `Local storage cache updated with ${tickets.length} tickets and ${clients.length} subscribers.`,
+    });
+  };
+
+  const handleAddServer = (newServer: NetworkServer) => {
+    setServers(prev => [newServer, ...prev]);
+    setStatusFeedback({
+      type: 'RESOLVED',
+      title: lang === 'bn' ? 'সার্ভার ডিভাইস যোগ করা হয়েছে' : 'Server Device Added',
+      message: `${newServer.name} (${newServer.ipAddress}) - ${newServer.type} ${lang === 'bn' ? 'সফলভাবে নেটওয়ার্কে যুক্ত হয়েছে।' : 'registered successfully.'}`,
+      cid: newServer.id,
+      ticketId: newServer.id,
+    });
+  };
+
+  const handleUpdateServer = (updatedServer: NetworkServer) => {
+    setServers(prev => prev.map(s => s.id === updatedServer.id ? updatedServer : s));
+  };
+
+  const handleDeleteServer = (serverId: string) => {
+    setServers(prev => prev.filter(s => s.id !== serverId));
+    setStatusFeedback({
+      type: 'AUTO_AI',
+      title: lang === 'bn' ? 'ডিভাইস মুছে ফেলা হয়েছে' : 'Device Removed',
+      message: `${serverId} ${lang === 'bn' ? 'সফলভাবে ইনভেন্টরি থেকে অপসারিত হয়েছে।' : 'removed from server inventory.'}`,
+      cid: serverId,
+      ticketId: serverId,
+    });
+  };
 
   // Application Modes
   const [currentRole, setCurrentRole] = useState<UserRole>('NOC');
@@ -146,6 +284,16 @@ export default function App() {
       timestamp: Date.now(),
     });
 
+    // Queue action if offline
+    if (!isOnline || isSimulatedOffline) {
+      queueOfflineAction({
+        type: 'UPDATE_STATUS',
+        payload: { ticketId, status },
+        description: `Status -> ${status} (#${ticketId})`,
+      });
+      setQueuedActionsCount(prev => prev + 1);
+    }
+
     // Trigger Outbound Notification API to Client & Manager (WhatsApp & Email)
     handleSendManualNotification(
       ticketId,
@@ -177,6 +325,15 @@ export default function App() {
       return t;
     }));
 
+    if (!isOnline || isSimulatedOffline) {
+      queueOfflineAction({
+        type: 'UPDATE_STATUS',
+        payload: { ticketId, assignedNoc: staffName, status: 'NOC_Assigned' },
+        description: `Assigned NOC ${staffName} (#${ticketId})`,
+      });
+      setQueuedActionsCount(prev => prev + 1);
+    }
+
     handleSendManualNotification(
       ticketId,
       tickets.find(t => t.id === ticketId)?.cid || 'CID-1001',
@@ -206,6 +363,15 @@ export default function App() {
       }
       return t;
     }));
+
+    if (!isOnline || isSimulatedOffline) {
+      queueOfflineAction({
+        type: 'ADD_NOTE',
+        payload: { ticketId, text },
+        description: `Added comment to #${ticketId}`,
+      });
+      setQueuedActionsCount(prev => prev + 1);
+    }
   };
 
   // Rating Ticket (Closes ticket)
@@ -503,6 +669,7 @@ export default function App() {
           clients={clients}
           nocStaff={nocStaff}
           notifications={notifications}
+          servers={servers}
           lang={lang}
           onSelectTicket={(ticket) => setSelectedTicket(ticket)}
           onUpdateTicketStatus={handleUpdateTicketStatus}
@@ -510,6 +677,9 @@ export default function App() {
           onSendManualNotification={handleSendManualNotification}
           onOpenNewTicketModal={() => setIsNewTicketModalOpen(true)}
           onOpenAddNewClient={() => setIsNewClientModalOpen(true)}
+          onAddServer={handleAddServer}
+          onUpdateServer={handleUpdateServer}
+          onDeleteServer={handleDeleteServer}
           currentUser={managerUser}
           onLogout={() => handleStaffLogout('MANAGER')}
         />
@@ -614,7 +784,58 @@ export default function App() {
         onOpenAddNewClient={() => setIsNewClientModalOpen(true)}
         onOpenAndroidInstall={() => setIsAndroidInstallModalOpen(true)}
         onGoHome={handleGoHome}
+        isOnline={isOnline}
+        isSimulatedOffline={isSimulatedOffline}
+        onToggleSimulateOffline={handleToggleSimulateOffline}
+        onManualSync={handleManualSync}
+        queuedActionsCount={queuedActionsCount}
+        tickets={tickets}
+        clients={clients}
+        servers={servers}
       />
+
+      {/* Offline Alert Strip if Network Dropped or Simulated Offline */}
+      {(!isOnline || isSimulatedOffline) && (
+        <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-amber-950 px-4 py-2 flex flex-wrap items-center justify-between gap-3 shadow-inner border-b border-amber-500/40 text-xs font-semibold">
+          <div className="flex items-center gap-2">
+            <span className="p-1 rounded bg-amber-900/20 text-amber-950 flex items-center justify-center">
+              <WifiOff className="w-4 h-4 animate-bounce" />
+            </span>
+            <span>
+              {isSimulatedOffline ? (
+                lang === 'bn' ? (
+                  <><strong>সিমুলেটেড অফলাইন মোড:</strong> ব্রাউজার লোকাল ক্যাশ থেকে ডাটা দেখানো হচ্ছে। টিকেট ব্রাউজ ও লোকাল আপডেট চালু আছে।</>
+                ) : (
+                  <><strong>Simulated Offline Mode:</strong> Working from local storage cache. Staff can browse, search, and update tickets seamlessly.</>
+                )
+              ) : (
+                lang === 'bn' ? (
+                  <><strong>ইন্টারনেট সংযোগ বিচ্ছিন্ন:</strong> লোকাল ক্যাশ থেকে {tickets.length} টি টিকেট প্রদর্শিত হচ্ছে। সংযোগ ফিরে আসলে স্বয়ংক্রিয়ভাবে সিঙ্ক হবে।</>
+                ) : (
+                  <><strong>Offline Mode Active:</strong> Displaying {tickets.length} cached tickets and {clients.length} clients. Changes will sync when online.</>
+                )
+              )}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleManualSync}
+              className="flex items-center gap-1 px-2.5 py-1 bg-amber-950/20 hover:bg-amber-950/30 text-amber-950 rounded font-bold transition-all text-[11px]"
+            >
+              <RefreshCw className="w-3 h-3" />
+              <span>{lang === 'bn' ? 'ক্যাশ রিফ্রেশ' : 'Sync Cache'}</span>
+            </button>
+            {isSimulatedOffline && (
+              <button
+                onClick={handleToggleSimulateOffline}
+                className="px-2 py-1 bg-amber-950 text-amber-100 hover:bg-amber-900 rounded font-bold transition-all text-[11px]"
+              >
+                {lang === 'bn' ? 'অনলাইন করুন' : 'Go Online'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Main Content View (Desktop vs Android Frame) */}
       <main className="bg-slate-100 min-h-[calc(100vh-4rem)]">
@@ -627,7 +848,39 @@ export default function App() {
             {renderActivePortal()}
           </AndroidAppFrame>
         ) : (
-          renderActivePortal()
+          <>
+            {renderActivePortal()}
+            <Footer
+              lang={lang}
+              onNavigateHome={() => setCurrentRole('CLIENT')}
+              onOpenNewTicket={() => setIsNewTicketModalOpen(true)}
+              onOpenNewClient={() => setIsNewClientModalOpen(true)}
+              onOpenPackages={() => {
+                setCurrentRole('CLIENT');
+                window.scrollTo({ top: 300, behavior: 'smooth' });
+              }}
+              onOpenCoverage={() => {
+                setCurrentRole('MANAGER');
+              }}
+              onOpenSpeedTest={() => {
+                setStatusFeedback({
+                  type: 'RESOLVED',
+                  title: lang === 'bn' ? 'BDIX স্পিড টেস্ট সার্ভার সক্রিয়' : 'BDIX Speed Test Connected',
+                  message: lang === 'bn' ? 'মিঠাপুকুর ১ গিগাবাইট BDIX লোকাল অপটিক্যাল ক্যাশ লিংক ১০০% সক্রিয়।' : 'Mithapukur 1Gbps BDIX optical backbone link is running at 0ms latency.',
+                });
+              }}
+              onOpenFaq={() => {
+                setCurrentRole('CLIENT');
+              }}
+              onOpenLogoModal={() => {
+                setStatusFeedback({
+                  type: 'RESOLVED',
+                  title: lang === 'bn' ? 'ডেল্টা ব্রডব্যান্ড অফিশিয়াল পরিচয়' : 'Delta Official Identity',
+                  message: lang === 'bn' ? 'রেজিস্টার্ড ট্রেডমার্ক: ডেল্টা ব্রডব্যান্ড ইন্টারনেট (মিঠাপুকুর শাখা)' : 'Registered Trademark: Delta Broadband Internet (Mithapukur Branch HQ)',
+                });
+              }}
+            />
+          </>
         )}
       </main>
 

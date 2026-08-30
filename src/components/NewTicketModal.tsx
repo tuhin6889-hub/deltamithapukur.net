@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TicketCategory, TicketPriority, ClientInfo } from '../types';
 import { VoiceDictationPanel } from './VoiceDictationPanel';
+import { TicketPriorityBadge } from './TicketPriorityBadge';
 import { 
   X, 
   Send, 
@@ -346,19 +347,56 @@ export const NewTicketModal: React.FC<NewTicketModalProps> = ({
 
           {/* Priority */}
           <div>
-            <label className="block font-bold text-slate-700 mb-1">
-              {lang === 'bn' ? 'জরুরি মাত্রা (Priority Level)' : 'Priority Severity'}
-            </label>
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as TicketPriority)}
-              className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value="Urgent">🚨 Urgent (জরুরি - LOS/Fiber Cut)</option>
-              <option value="High">⚠️ High (উচ্চ)</option>
-              <option value="Medium">⚡ Medium (সাধারণ)</option>
-              <option value="Low">🟢 Low (কম)</option>
-            </select>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block font-bold text-slate-700">
+                {lang === 'bn' ? 'জরুরি মাত্রা (Priority Level)' : 'Priority Severity'}
+              </label>
+              <TicketPriorityBadge priority={priority} lang={lang} size="xs" theme="light" />
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setPriority('Urgent')}
+                className={`p-2.5 rounded-xl border text-center font-bold text-xs transition-all flex flex-col items-center gap-1 cursor-pointer ${
+                  priority === 'Urgent'
+                    ? 'bg-rose-50 border-rose-500 text-rose-800 ring-2 ring-rose-400/40 shadow-sm'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-rose-300'
+                }`}
+              >
+                <span className="text-sm">🚨</span>
+                <span className="font-extrabold text-rose-700">{lang === 'bn' ? 'জরুরি (Urgent)' : 'Urgent (Red)'}</span>
+                <span className="text-[10px] text-slate-400 font-normal">LOS / ফাইবার কাট</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPriority('High')}
+                className={`p-2.5 rounded-xl border text-center font-bold text-xs transition-all flex flex-col items-center gap-1 cursor-pointer ${
+                  priority === 'High'
+                    ? 'bg-amber-50 border-amber-500 text-amber-800 ring-2 ring-amber-400/40 shadow-sm'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-amber-300'
+                }`}
+              >
+                <span className="text-sm">🔥</span>
+                <span className="font-extrabold text-amber-700">{lang === 'bn' ? 'উচ্চ (High)' : 'High (Orange)'}</span>
+                <span className="text-[10px] text-slate-400 font-normal">হাই পিং / প্যাকেট লস</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPriority('Medium')}
+                className={`p-2.5 rounded-xl border text-center font-bold text-xs transition-all flex flex-col items-center gap-1 cursor-pointer ${
+                  priority === 'Medium' || priority === 'Low'
+                    ? 'bg-blue-50 border-blue-500 text-blue-800 ring-2 ring-blue-400/40 shadow-sm'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-blue-300'
+                }`}
+              >
+                <span className="text-sm">ℹ️</span>
+                <span className="font-extrabold text-blue-700">{lang === 'bn' ? 'স্বাভাবিক (Normal)' : 'Normal (Blue)'}</span>
+                <span className="text-[10px] text-slate-400 font-normal">বিলিং / কনফিগ</span>
+              </button>
+            </div>
           </div>
 
           {/* Submit */}

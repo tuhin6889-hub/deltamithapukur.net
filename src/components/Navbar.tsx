@@ -1,6 +1,7 @@
 import React from 'react';
-import { UserRole, DeviceMode } from '../types';
+import { UserRole, DeviceMode, Ticket, ClientInfo, NetworkServer } from '../types';
 import { DeltaLogo } from './DeltaLogo';
+import { OfflineSyncBar } from './OfflineSyncBar';
 import { 
   ShieldCheck, 
   Cpu, 
@@ -50,6 +51,15 @@ interface NavbarProps {
   onOpenAddNewClient?: () => void;
   onGoHome?: () => void;
   onOpenAndroidInstall?: () => void;
+  // Offline Cache & Sync Props
+  isOnline?: boolean;
+  isSimulatedOffline?: boolean;
+  onToggleSimulateOffline?: () => void;
+  onManualSync?: () => void;
+  queuedActionsCount?: number;
+  tickets?: Ticket[];
+  clients?: ClientInfo[];
+  servers?: NetworkServer[];
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -73,6 +83,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAddNewClient,
   onGoHome,
   onOpenAndroidInstall,
+  isOnline = true,
+  isSimulatedOffline = false,
+  onToggleSimulateOffline = () => {},
+  onManualSync = () => {},
+  queuedActionsCount = 0,
+  tickets = [],
+  clients = [],
+  servers = [],
 }) => {
   const activeStaff = currentRole === 'MANAGER' ? managerUser : currentRole === 'NOC' ? nocUser : null;
 
@@ -139,6 +157,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Right Controls */}
           <div className="flex items-center gap-2 sm:gap-3">
             
+            {/* Offline Cache & Real-Time Sync Badge */}
+            <OfflineSyncBar
+              isOnline={isOnline}
+              isSimulatedOffline={isSimulatedOffline}
+              tickets={tickets}
+              clients={clients}
+              servers={servers}
+              lang={lang}
+              onToggleSimulateOffline={onToggleSimulateOffline}
+              onManualSync={onManualSync}
+              queuedActionsCount={queuedActionsCount}
+            />
+
             {/* Logged in Staff Badge & Logout Button */}
             {activeStaff && (
               <div className="flex items-center gap-2 bg-slate-800/90 px-2.5 py-1.5 rounded-xl border border-slate-700">
@@ -313,4 +344,5 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
+
 

@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Ticket, NocStaff, TicketStatus, TicketPriority } from '../types';
 import { DeltaLogo } from './DeltaLogo';
 import { TicketStatusBadge } from './TicketStatusBadge';
+import { TicketPriorityBadge, getPriorityColorConfig } from './TicketPriorityBadge';
+import { SlaTimer } from './SlaTimer';
 import { 
   Cpu, 
   Activity, 
@@ -41,110 +43,6 @@ interface NocPortalProps {
   currentUser?: { username: string; name: string } | null;
   onLogout?: () => void;
 }
-
-export const SlaCountdownTimer: React.FC<{
-  createdDate: string;
-  status: TicketStatus;
-  priority: TicketPriority;
-  lang: 'bn' | 'en';
-  slaHours?: number;
-}> = ({ createdDate, status, priority, lang, slaHours = 2 }) => {
-  const [now, setNow] = useState<number>(Date.now());
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(Date.now());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  if (priority !== 'Urgent') return null;
-
-  const isResolved = status === 'Resolved' || status === 'Closed';
-  const createdTime = new Date(createdDate).getTime();
-  const slaTargetTime = createdTime + slaHours * 60 * 60 * 1000;
-  const remainingMs = slaTargetTime - now;
-  const totalSlaMs = slaHours * 60 * 60 * 1000;
-  const elapsedTime = Math.max(0, now - createdTime);
-  const progressPercent = isResolved 
-    ? 100 
-    : Math.min(100, Math.max(0, (elapsedTime / totalSlaMs) * 100));
-
-  if (isResolved) {
-    return (
-      <div className="bg-emerald-950/40 border border-emerald-500/40 p-2.5 rounded-2xl flex items-center justify-between text-xs font-mono">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-          <span className="font-extrabold text-emerald-300">
-            {lang === 'bn' ? '✓ এসএলএ (SLA) সফলভাবে সংরক্ষিত' : '✓ SLA Target Maintained'}
-          </span>
-        </div>
-        <span className="text-[11px] text-emerald-400/80">
-          {lang === 'bn' ? '২ ঘণ্টার মধ্যে সমাধানকৃত' : 'Resolved within 2h SLA'}
-        </span>
-      </div>
-    );
-  }
-
-  const isBreached = remainingMs <= 0;
-  const absMs = Math.abs(remainingMs);
-  const hours = Math.floor(absMs / (1000 * 60 * 60));
-  const minutes = Math.floor((absMs % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((absMs % (1000 * 60)) / 1000);
-
-  const formattedTimer = `${hours > 0 ? `${hours}h ` : ''}${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`;
-  const isWarning = !isBreached && remainingMs < 30 * 60 * 1000;
-
-  return (
-    <div className={`p-3.5 rounded-2xl border transition-all space-y-2.5 ${
-      isBreached 
-        ? 'bg-rose-950/70 border-rose-600/80 text-rose-100 shadow-lg shadow-rose-950/60 animate-pulse' 
-        : isWarning 
-        ? 'bg-amber-950/60 border-amber-500/80 text-amber-200' 
-        : 'bg-slate-950/90 border-rose-500/40 text-slate-200'
-    }`}>
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Clock className={`w-4 h-4 ${isBreached ? 'text-rose-400 animate-spin' : isWarning ? 'text-amber-400' : 'text-rose-400'}`} />
-          <span className="font-extrabold font-mono text-xs uppercase tracking-wider">
-            {isBreached 
-              ? (lang === 'bn' ? '🚨 এসএলএ সময় পার হয়েছে (SLA BREACHED)' : '🚨 SLA TARGET BREACHED')
-              : (lang === 'bn' ? '⏱️ ২-ঘণ্টা সার্ভিস লেভেল কাউন্টডাউন' : '⏱️ 2-HOUR SLA TARGET COUNTDOWN')}
-          </span>
-        </div>
-
-        <div className={`font-mono font-black text-sm px-3 py-1 rounded-xl border tracking-wider shadow-inner ${
-          isBreached 
-            ? 'bg-rose-900/80 border-rose-500 text-rose-200' 
-            : isWarning 
-            ? 'bg-amber-900/80 border-amber-400 text-amber-200' 
-            : 'bg-slate-900 border-slate-700 text-teal-300'
-        }`}>
-          {isBreached ? `-${formattedTimer}` : formattedTimer}
-        </div>
-      </div>
-
-      {/* SLA Progress Bar */}
-      <div className="space-y-1">
-        <div className="w-full bg-slate-900/90 rounded-full h-2 overflow-hidden border border-slate-800">
-          <div 
-            className={`h-full transition-all duration-1000 ${
-              isBreached ? 'bg-rose-600' : isWarning ? 'bg-amber-400' : 'bg-gradient-to-r from-emerald-400 via-amber-400 to-rose-500'
-            }`}
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-        <div className="flex justify-between text-[10px] font-mono text-slate-400">
-          <span>Created: {new Date(createdDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-          <span className={isBreached ? 'text-rose-400 font-bold' : ''}>
-            {isBreached ? 'SLA OVERDUE' : `${Math.round(progressPercent)}% SLA Time Elapsed`}
-          </span>
-          <span>SLA Deadline: {new Date(slaTargetTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export const NocPortal: React.FC<NocPortalProps> = ({
   tickets,
@@ -327,6 +225,27 @@ export const NocPortal: React.FC<NocPortalProps> = ({
         {/* Live Metrics Quick Badges & Technician Selector */}
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-between lg:justify-end">
           
+          {/* Header Quick Ticket Search Bar */}
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 text-teal-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder={lang === 'bn' ? 'CID, নাম বা টিকেট ID খুঁজুন...' : 'Search CID, Name, Ticket ID...'}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 bg-slate-950/90 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-400 shadow-inner font-medium"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs font-bold w-4 h-4 flex items-center justify-center rounded-full bg-slate-800"
+                title="Clear search"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
           {/* Live Clock */}
           <div className="bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl flex items-center gap-2 font-mono text-xs text-slate-300">
             <Clock className="w-4 h-4 text-teal-400" />
@@ -710,24 +629,40 @@ export const NocPortal: React.FC<NocPortalProps> = ({
               </div>
 
               {/* Ticket Search Bar */}
-              <div className="relative w-full sm:w-80">
-                <Search className="w-4 h-4 text-teal-400 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  placeholder={lang === 'bn' ? 'CID, টিকেট ID, ফোন বা গ্রাহকের নাম খুঁজুন...' : 'Search by CID, Ticket ID, Client Name...'}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-8 py-1.5 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-inner font-medium"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs font-bold w-4 h-4 flex items-center justify-center rounded-full bg-slate-800"
-                    title="Clear search"
-                  >
-                    ✕
-                  </button>
-                )}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
+                <div className="relative w-full sm:w-80">
+                  <Search className="w-4 h-4 text-teal-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder={lang === 'bn' ? 'CID (যেমন CID-101), নাম বা টিকেট ID খুঁজুন...' : 'Filter by CID (e.g. CID-101), Client Name, or Ticket ID...'}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-8 py-2 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-inner font-medium"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs font-bold w-4 h-4 flex items-center justify-center rounded-full bg-slate-800"
+                      title="Clear search"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* Quick Search Chips */}
+                <div className="hidden xl:flex items-center gap-1 text-xs">
+                  {['CID-101', 'CID-102', 'LOS', 'Urgent'].map(tag => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setSearchQuery(tag)}
+                      className="px-2 py-1 rounded-lg bg-slate-950 hover:bg-teal-950 text-slate-400 hover:text-teal-300 font-mono text-[11px] border border-slate-800 transition-colors"
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -827,15 +762,33 @@ export const NocPortal: React.FC<NocPortalProps> = ({
             ) : (
               filteredTickets.map((ticket) => {
                 const isLos = ticket.priority === 'Urgent' || ticket.category.includes('LOS') || ticket.category.includes('ফাইবার');
+                const priorityConfig = getPriorityColorConfig(ticket.priority);
 
                 return (
                   <div 
                     key={ticket.id} 
                     className={`bg-slate-900/90 rounded-3xl p-5 md:p-6 border shadow-xl transition-all relative overflow-hidden space-y-4 ${
-                      isLos ? 'border-rose-800/60 bg-gradient-to-br from-slate-900 via-slate-900 to-rose-950/20' : 'border-slate-800'
+                      ticket.priority === 'Urgent' 
+                        ? 'border-l-[6px] border-l-rose-500 border-rose-800/50 bg-gradient-to-br from-slate-900 via-slate-900 to-rose-950/20 shadow-[inset_4px_0_20px_rgba(244,63,94,0.08)]' 
+                        : ticket.priority === 'High' 
+                        ? 'border-l-[6px] border-l-yellow-400 border-yellow-800/40 bg-gradient-to-br from-slate-900 via-slate-900 to-yellow-950/15 shadow-[inset_4px_0_20px_rgba(234,179,8,0.06)]' 
+                        : 'border-l-[6px] border-l-blue-500 border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950/15 shadow-[inset_4px_0_20px_rgba(59,130,246,0.06)]'
                     }`}
                   >
-                    
+                    {/* Top Priority Visual Indicator Pill Strip for NOC Scanning */}
+                    <div className="flex items-center justify-between text-[11px] font-mono pb-2 border-b border-slate-800/60">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${priorityConfig.dotColor} ${priorityConfig.isPulsing ? 'animate-ping' : ''}`} />
+                        <span className={`font-bold px-2 py-0.5 rounded-md ${priorityConfig.pillColorDark}`}>
+                          {priorityConfig.name === 'Urgent' ? '🔴 RED / URGENT' : priorityConfig.name === 'High' ? '🟡 YELLOW / HIGH' : '🔵 BLUE / NORMAL'}
+                        </span>
+                        <span className="text-slate-400 hidden sm:inline">• {ticket.category}</span>
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        {lang === 'bn' ? 'তৈরি:' : 'Logged:'} {new Date(ticket.createdDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+
                     {/* Top Row: Badges & Status Selector */}
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -920,12 +873,12 @@ export const NocPortal: React.FC<NocPortalProps> = ({
                           </p>
                         </div>
 
-                        <span className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold uppercase ${
-                          ticket.priority === 'Urgent' ? 'bg-rose-600 text-white' :
-                          ticket.priority === 'High' ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300'
-                        }`}>
-                          {ticket.priority}
-                        </span>
+                        <TicketPriorityBadge
+                          priority={ticket.priority}
+                          lang={lang}
+                          size="sm"
+                          theme="dark"
+                        />
                       </div>
 
                       <p className="text-xs text-slate-300 mt-2 bg-slate-950 p-3 rounded-2xl border border-slate-800/80 leading-relaxed">
@@ -933,15 +886,12 @@ export const NocPortal: React.FC<NocPortalProps> = ({
                       </p>
                     </div>
 
-                    {/* Visual SLA Countdown Timer for Urgent Priority Tickets */}
-                    {ticket.priority === 'Urgent' && (
-                      <SlaCountdownTimer
-                        createdDate={ticket.createdDate}
-                        status={ticket.status}
-                        priority={ticket.priority}
-                        lang={lang}
-                      />
-                    )}
+                    {/* Visual SLA Countdown Timer based on ticket priority */}
+                    <SlaTimer
+                      ticket={ticket}
+                      lang={lang}
+                      variant="card"
+                    />
 
                     {/* AI NOC Diagnostics Assistant Widget Trigger */}
                     <div className="p-3.5 bg-slate-950/90 border border-teal-500/30 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-inner">

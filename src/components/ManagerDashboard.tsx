@@ -1,9 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Ticket, ClientInfo, NocStaff, TicketStatus, TicketPriority, NotificationLog } from '../types';
+import { Ticket, ClientInfo, NocStaff, TicketStatus, TicketPriority, NotificationLog, NetworkServer } from '../types';
+import { INITIAL_SERVERS } from '../data/mockData';
 import { DeltaLogo } from './DeltaLogo';
 import { WorkOrderModal } from './WorkOrderModal';
 import { TicketStatusBadge } from './TicketStatusBadge';
+import { TicketPriorityBadge, getPriorityColorConfig } from './TicketPriorityBadge';
+import { NetworkServerManager } from './NetworkServerManager';
+import { MonthSummaryAnalytics } from './MonthSummaryAnalytics';
 import { 
   CheckCircle2, 
   Clock, 
@@ -66,6 +70,7 @@ interface ManagerDashboardProps {
   clients: ClientInfo[];
   nocStaff: NocStaff[];
   notifications: NotificationLog[];
+  servers?: NetworkServer[];
   lang: 'bn' | 'en';
   onSelectTicket: (ticket: Ticket) => void;
   onUpdateTicketStatus: (ticketId: string, status: TicketStatus) => void;
@@ -73,6 +78,9 @@ interface ManagerDashboardProps {
   onSendManualNotification: (ticketId: string, cid: string, message: string, channel: 'WhatsApp' | 'Email' | 'SMS') => void;
   onOpenNewTicketModal: () => void;
   onOpenAddNewClient?: () => void;
+  onAddServer?: (server: NetworkServer) => void;
+  onUpdateServer?: (server: NetworkServer) => void;
+  onDeleteServer?: (serverId: string) => void;
   currentUser?: { username: string; name: string } | null;
   onLogout?: () => void;
 }
@@ -82,6 +90,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   clients,
   nocStaff,
   notifications,
+  servers = INITIAL_SERVERS,
   lang,
   onSelectTicket,
   onUpdateTicketStatus,
@@ -89,12 +98,33 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   onSendManualNotification,
   onOpenNewTicketModal,
   onOpenAddNewClient,
+  onAddServer,
+  onUpdateServer,
+  onDeleteServer,
   currentUser,
   onLogout,
 }) => {
-  const [activeTab, setActiveTab] = useState<'KPI_DASHBOARD' | 'TICKETS' | 'NOC_STAFF' | 'CLIENTS' | 'BROADCAST'>('KPI_DASHBOARD');
+  const [activeTab, setActiveTab] = useState<'KPI_DASHBOARD' | 'TICKETS' | 'NOC_STAFF' | 'CLIENTS' | 'SERVERS' | 'BROADCAST'>('KPI_DASHBOARD');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Network Servers State
+  const [serversList, setServersList] = useState<NetworkServer[]>(servers);
+
+  const handleAddServer = (newServer: NetworkServer) => {
+    setServersList(prev => [newServer, ...prev]);
+    if (onAddServer) onAddServer(newServer);
+  };
+
+  const handleUpdateServer = (updatedServer: NetworkServer) => {
+    setServersList(prev => prev.map(s => s.id === updatedServer.id ? updatedServer : s));
+    if (onUpdateServer) onUpdateServer(updatedServer);
+  };
+
+  const handleDeleteServer = (serverId: string) => {
+    setServersList(prev => prev.filter(s => s.id !== serverId));
+    if (onDeleteServer) onDeleteServer(serverId);
+  };
 
   const navItems = [
     {
@@ -116,6 +146,16 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
       badgeClass: 'bg-slate-800 text-slate-200 border border-slate-700',
       descriptionBn: 'কমপ্লেন ও ডিসপ্যাচ ট্র্যাকিং',
       descriptionEn: 'Active complaints & dispatch',
+    },
+    {
+      id: 'SERVERS' as const,
+      labelBn: 'সার্ভার ও ওএলটি (Servers & OLT)',
+      labelEn: 'Network Servers & OLT',
+      icon: Server,
+      badge: `${serversList.length} Devices`,
+      badgeClass: 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30',
+      descriptionBn: 'OLT ও মাইক্রোটিক কন্ট্রোল',
+      descriptionEn: 'OLT, MikroTik & Core Routers',
     },
     {
       id: 'NOC_STAFF' as const,
@@ -151,6 +191,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   const [trendRange, setTrendRange] = useState<7 | 14 | 30>(30);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedArea, setSelectedArea] = useState('ALL');
+  const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [selectedPriority, setSelectedPriority] = useState<string>('ALL');
   const [selectedHotspotNode, setSelectedHotspotNode] = useState<string | null>('মিঠাপুকুর সদর (Mithapukur Sadar)');
@@ -344,10 +385,11 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
       ticket.title.toLowerCase().includes(q);
 
     const matchesArea = selectedArea === 'ALL' || ticket.area.includes(selectedArea);
+    const matchesCategory = selectedCategory === 'ALL' || ticket.category.toLowerCase().includes(selectedCategory.toLowerCase()) || (selectedCategory === 'Red LOS' && (ticket.category.includes('LOS') || ticket.title.includes('LOS'))) || (selectedCategory === 'Fiber Cut' && (ticket.category.includes('ফাইবার') || ticket.title.toLowerCase().includes('cut')));
     const matchesStatus = selectedStatus === 'ALL' || ticket.status === selectedStatus;
     const matchesPriority = selectedPriority === 'ALL' || ticket.priority === selectedPriority;
 
-    return matchesSearch && matchesArea && matchesStatus && matchesPriority;
+    return matchesSearch && matchesArea && matchesCategory && matchesStatus && matchesPriority;
   });
 
   const handleSendBroadcast = (e: React.FormEvent) => {
@@ -394,7 +436,33 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+            {/* Global Quick Search Field */}
+            <div className="relative w-full sm:w-64 md:w-72">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" />
+              <input
+                type="text"
+                placeholder={lang === 'bn' ? 'CID, নাম বা টিকেট ID খুঁজুন...' : 'Search CID, Client Name, Ticket ID...'}
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (activeTab !== 'TICKETS' && e.target.value.trim()) {
+                    setActiveTab('TICKETS');
+                  }
+                }}
+                className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-slate-900/90 border border-slate-700/80 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-inner font-medium"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs font-bold w-4 h-4 flex items-center justify-center rounded-full bg-slate-800"
+                  title="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
             {currentUser && (
               <div className="flex items-center gap-2 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-700/80 text-xs">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -784,6 +852,16 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
             </div>
 
           </div>
+
+          {/* Current Month Category & Resolution Summary Section (Recharts) */}
+          <MonthSummaryAnalytics
+            tickets={tickets}
+            lang={lang}
+            onFilterCategory={(category) => {
+              setSelectedCategory(category);
+              setActiveTab('TICKETS');
+            }}
+          />
 
           {/* Recharts Grid Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1309,7 +1387,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
                 <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-emerald-600" />
                 <input
                   type="text"
-                  placeholder={lang === 'bn' ? 'CID, টিকেট ID, ফোন বা গ্রাহকের নাম খুঁজুন...' : 'Search by CID, Client Name, Ticket ID...'}
+                  placeholder={lang === 'bn' ? 'CID (যেমন CID-101), গ্রাহকের নাম বা টিকেট ID (#1001) খুঁজুন...' : 'Filter by CID (e.g. CID-101), Client Name, or Ticket ID...'}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-9 py-2.5 text-xs md:text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50 font-medium text-slate-900 shadow-inner"
@@ -1323,6 +1401,21 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
                     ✕
                   </button>
                 )}
+              </div>
+
+              {/* Quick Search Suggestion Pills */}
+              <div className="hidden lg:flex items-center gap-1.5 text-xs">
+                <span className="text-[11px] font-mono text-slate-400 font-semibold">{lang === 'bn' ? 'কুইক সার্চ:' : 'Quick:'}</span>
+                {['CID-101', 'CID-102', 'LOS', 'Urgent'].map(tag => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setSearchQuery(tag)}
+                    className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-emerald-100 text-slate-600 hover:text-emerald-800 font-mono text-[11px] border border-slate-200 transition-colors"
+                  >
+                    {tag}
+                  </button>
+                ))}
               </div>
 
               {/* CSV Export & Filter Controls */}
@@ -1431,23 +1524,35 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {filteredTickets.map((ticket) => (
-                    <tr 
-                      key={ticket.id} 
-                      className="hover:bg-slate-50 transition-colors group"
-                    >
-                      {/* Ticket ID & Time */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900 font-mono flex items-center gap-1.5">
-                          <span>#{ticket.id}</span>
-                          {ticket.priority === 'Urgent' && (
-                            <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" title="Emergency High Priority" />
-                          )}
-                        </div>
-                        <p className="text-[11px] text-slate-500 mt-0.5 font-mono">
-                          {new Date(ticket.createdDate).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </td>
+                  {filteredTickets.map((ticket) => {
+                    const priorityConfig = getPriorityColorConfig(ticket.priority);
+
+                    return (
+                      <tr 
+                        key={ticket.id} 
+                        className={`transition-colors group ${
+                          ticket.priority === 'Urgent'
+                            ? 'border-l-4 border-l-rose-500 bg-rose-50/30 hover:bg-rose-50/60'
+                            : ticket.priority === 'High'
+                            ? 'border-l-4 border-l-yellow-400 bg-yellow-50/30 hover:bg-yellow-50/60'
+                            : 'border-l-4 border-l-blue-500 bg-blue-50/15 hover:bg-blue-50/40'
+                        }`}
+                      >
+                        {/* Ticket ID & Time */}
+                        <td className="py-3.5 px-4">
+                          <div className="font-bold text-slate-900 font-mono flex items-center gap-1.5">
+                            <span>#{ticket.id}</span>
+                            {ticket.priority === 'Urgent' && (
+                              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" title="Emergency High Priority (Red)" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className={`w-1.5 h-1.5 rounded-full ${priorityConfig.dotColor}`} />
+                            <p className="text-[11px] text-slate-500 font-mono">
+                              {new Date(ticket.createdDate).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </td>
 
                       {/* Client CID, Name & Union */}
                       <td className="py-3.5 px-4">
@@ -1472,15 +1577,12 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
 
                       {/* Priority Tag */}
                       <td className="py-3.5 px-4">
-                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold inline-block ${
-                          ticket.priority === 'Urgent' 
-                            ? 'bg-rose-100 text-rose-800 border border-rose-300 animate-pulse' 
-                            : ticket.priority === 'High'
-                            ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                            : 'bg-slate-100 text-slate-700'
-                        }`}>
-                          {ticket.priority === 'Urgent' ? '🚨 Urgent' : ticket.priority}
-                        </span>
+                        <TicketPriorityBadge 
+                          priority={ticket.priority} 
+                          lang={lang} 
+                          size="sm" 
+                          theme="light" 
+                        />
                       </td>
 
                       {/* Status Tag & Single-Click Selector */}
@@ -1551,7 +1653,8 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
                         </button>
                       </td>
                     </tr>
-                  ))}
+                  );
+                })}
 
                   {filteredTickets.length === 0 && (
                     <tr>
@@ -1686,7 +1789,21 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
         </div>
       )}
 
-      {/* TAB 4: WHATSAPP & EMAIL BROADCAST ALERT TRIGGER */}
+      {/* TAB 4: NETWORK SERVERS, OLT & MIKROTIK DEVICE MANAGER */}
+      {activeTab === 'SERVERS' && (
+        <div className="animate-fade-in">
+          <NetworkServerManager
+            servers={serversList}
+            popAreas={popAreas}
+            lang={lang}
+            onAddServer={handleAddServer}
+            onUpdateServer={handleUpdateServer}
+            onDeleteServer={handleDeleteServer}
+          />
+        </div>
+      )}
+
+      {/* TAB 5: WHATSAPP & EMAIL BROADCAST ALERT TRIGGER */}
       {activeTab === 'BROADCAST' && (
         <div className="max-w-2xl mx-auto bg-white rounded-2xl p-6 border border-slate-200 shadow-md">
           <div className="flex items-center gap-3 mb-4">
