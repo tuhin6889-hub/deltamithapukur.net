@@ -14,7 +14,9 @@ import {
   Phone,
   Mail,
   MapPin,
-  CheckCircle2
+  CheckCircle2,
+  Facebook,
+  Linkedin
 } from 'lucide-react';
 
 interface FooterProps {
@@ -64,26 +66,51 @@ export const Footer: React.FC<FooterProps> = ({
                   Delta Mithapukur Branch
                 </h3>
                 <p className="text-sm font-bold text-sky-400 mt-0.5 font-sans">
-                  {lang === 'bn' ? 'অপ্টিক্যাল ফাইবার ব্রডব্যান্ড' : 'Optical Fiber Broadband'}
+                  Optical Fiber Broadband
                 </p>
               </div>
             </div>
 
             {/* Paragraph Description */}
             <p className="text-sm text-slate-400 leading-relaxed max-w-xl">
-              {lang === 'bn'
-                ? 'ডেল্টা মিঠাপুকুর শাখা সমগ্র মিঠাপুকুর উপজেলা ও রংপুর অঞ্চলে সর্বোচ্চ গতির অপটিক্যাল ফাইবার ব্রডব্যান্ড ও নিরবচ্ছিন্ন ডেডিকেটেড কর্পোরেট ইন্টারনেট সেবা প্রদানে শীর্ষস্থানীয়।'
-                : 'Delta Mithapukur Branch is a leading provider of high-speed fiber broadband and dedicated corporate internet lines across Mithapukur Upazila, Rangpur Division.'}
+              Delta Mithapukur Branch is a leading provider of high-speed optical fiber broadband and uninterrupted dedicated corporate internet connectivity across Mithapukur Upazila and Rangpur Division.
             </p>
 
-            {/* Official Registered Branch Banner */}
-            <div className="flex items-center gap-2 text-xs font-semibold text-sky-400/90 font-mono">
-              <ShieldCheck className="w-4 h-4 text-sky-400 shrink-0" />
-              <span>
-                {lang === 'bn' 
-                  ? 'অফিসিয়াল রেজিস্টার্ড শাখা — ডেল্টা ব্রডব্যান্ড আইএসপি' 
-                  : 'Official Registered Branch — Delta Broadband ISP'}
-              </span>
+            {/* Official Registered Branch Banner & Social Media Row */}
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <div className="flex items-center gap-2 text-xs font-semibold text-sky-400/90 font-mono bg-sky-950/30 border border-sky-800/40 px-3 py-1.5 rounded-xl">
+                <ShieldCheck className="w-4 h-4 text-sky-400 shrink-0" />
+                <span>
+                  Official Registered Branch — Delta Broadband ISP
+                </span>
+              </div>
+
+              {/* Social Media Link Badges */}
+              <div className="flex items-center gap-2">
+                <a
+                  href="https://facebook.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-[#1877F2]/15 text-slate-300 hover:text-[#1877F2] border border-slate-800 hover:border-[#1877F2]/50 transition-all text-xs font-medium group active:scale-95 shadow-sm"
+                  aria-label="Delta Broadband on Facebook"
+                  title="Delta Broadband on Facebook"
+                >
+                  <Facebook className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#1877F2] transition-colors" />
+                  <span className="font-semibold text-xs">Facebook</span>
+                </a>
+
+                <a
+                  href="https://linkedin.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-[#0A66C2]/15 text-slate-300 hover:text-[#0A66C2] border border-slate-800 hover:border-[#0A66C2]/50 transition-all text-xs font-medium group active:scale-95 shadow-sm"
+                  aria-label="Delta Broadband on LinkedIn"
+                  title="Delta Broadband on LinkedIn"
+                >
+                  <Linkedin className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#0A66C2] transition-colors" />
+                  <span className="font-semibold text-xs">LinkedIn</span>
+                </a>
+              </div>
             </div>
 
             {/* Bottom 2 Profile Highlight Cards */}
@@ -109,7 +136,7 @@ export const Footer: React.FC<FooterProps> = ({
                     Mahamudul Hasan
                   </h4>
                   <p className="text-xs text-slate-400 truncate">
-                    {lang === 'bn' ? 'ব্রাঞ্চ ম্যানেজার' : 'Branch Manager'}
+                    Branch Manager
                   </p>
                 </div>
               </div>
@@ -125,10 +152,10 @@ export const Footer: React.FC<FooterProps> = ({
                     <span>OUR TEAM</span>
                   </div>
                   <h4 className="text-sm font-black text-white truncate mt-0.5">
-                    Delta Mithapuku...
+                    Delta Mithapukur Team
                   </h4>
                   <p className="text-xs text-slate-400 truncate">
-                    {lang === 'bn' ? '৭ জন সক্রিয় সদস্য' : '7 Active Members'}
+                    7 Active Members
                   </p>
                 </div>
               </div>
@@ -157,7 +184,7 @@ export const Footer: React.FC<FooterProps> = ({
                   onClick={onNavigateHome}
                   className="text-slate-400 hover:text-white transition-colors flex items-center gap-2 text-left"
                 >
-                  <span>{lang === 'bn' ? 'হোম পেইজ' : 'Home Page'}</span>
+                  <span>Home Page</span>
                 </button>
               </li>
 
@@ -166,7 +193,7 @@ export const Footer: React.FC<FooterProps> = ({
                   onClick={onOpenPackages}
                   className="text-slate-400 hover:text-white transition-colors flex items-center gap-2 text-left"
                 >
-                  <span>{lang === 'bn' ? 'প্যাকেজ ও মাসিক ফি' : 'Packages & Fees'}</span>
+                  <span>Packages & Monthly Fees</span>
                 </button>
               </li>
 
@@ -175,7 +202,7 @@ export const Footer: React.FC<FooterProps> = ({
                   onClick={onOpenPackages}
                   className="text-slate-400 hover:text-white transition-colors flex items-center gap-2 text-left"
                 >
-                  <span>{lang === 'bn' ? 'ব্রডব্যান্ড ইন্টারনেট সার্ভিসেস' : 'Broadband Services'}</span>
+                  <span>Broadband Internet Services</span>
                 </button>
               </li>
 
@@ -184,7 +211,7 @@ export const Footer: React.FC<FooterProps> = ({
                   onClick={onOpenCoverage}
                   className="text-slate-400 hover:text-white transition-colors flex items-center gap-2 text-left"
                 >
-                  <span>{lang === 'bn' ? 'মিঠাপুকুর কাভারেজ এরিয়া' : 'Mithapukur Coverage Area'}</span>
+                  <span>Mithapukur Coverage Area</span>
                 </button>
               </li>
 
@@ -204,18 +231,18 @@ export const Footer: React.FC<FooterProps> = ({
                   className="text-slate-400 hover:text-white transition-colors flex items-center gap-2 text-left"
                 >
                   <HelpCircle className="w-4 h-4 text-slate-500" />
-                  <span>{lang === 'bn' ? 'প্রশ্নোত্তর ও হেল্প সেন্টার' : 'FAQ & Help Center'}</span>
+                  <span>FAQ & Help Center</span>
                 </button>
               </li>
 
-              {/* Referral Rewards (Highlighted Green in screenshot) */}
+              {/* Referral Rewards */}
               <li>
                 <button
                   onClick={onOpenNewClient}
                   className="text-emerald-400 hover:text-emerald-300 font-bold transition-colors flex items-center gap-2 text-left"
                 >
                   <Gift className="w-4 h-4 text-emerald-400" />
-                  <span>{lang === 'bn' ? 'রেফারেল রিওয়ার্ডস' : 'Referral Rewards'}</span>
+                  <span>Referral Rewards</span>
                 </button>
               </li>
 
@@ -225,7 +252,7 @@ export const Footer: React.FC<FooterProps> = ({
                   className="text-slate-400 hover:text-white transition-colors flex items-center gap-2 text-left"
                 >
                   <UserPlus className="w-4 h-4 text-slate-500" />
-                  <span>{lang === 'bn' ? 'নতুন সংযোগের আবেদন' : 'Apply For Connection'}</span>
+                  <span>Apply For New Connection</span>
                 </button>
               </li>
 
@@ -235,7 +262,7 @@ export const Footer: React.FC<FooterProps> = ({
                   className="text-slate-400 hover:text-white transition-colors flex items-center gap-2 text-left"
                 >
                   <Sparkles className="w-4 h-4 text-slate-500" />
-                  <span>{lang === 'bn' ? 'অফিসিয়াল লোগো ও আইডেন্টিটি' : 'Official Logo & Identity'}</span>
+                  <span>Official Logo & Brand Identity</span>
                 </button>
               </li>
             </ul>
@@ -246,13 +273,39 @@ export const Footer: React.FC<FooterProps> = ({
 
         {/* Bottom Sub-Footer Bar */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 font-mono">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <span>© {new Date().getFullYear()} Delta Broadband ISP (Mithapukur Branch).</span>
             <span className="hidden sm:inline">•</span>
             <span className="hidden sm:inline text-slate-400">All Rights Reserved.</span>
           </div>
 
-          <div className="flex items-center gap-4 text-[11px] flex-wrap justify-center sm:justify-end">
+          <div className="flex items-center gap-3 text-[11px] flex-wrap justify-center sm:justify-end">
+            {/* Direct Social Links */}
+            <div className="flex items-center gap-1.5">
+              <a
+                href="https://facebook.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1.5 rounded-lg bg-slate-900 hover:bg-[#1877F2]/20 text-slate-400 hover:text-[#1877F2] border border-slate-800 transition-colors"
+                title="Facebook"
+                aria-label="Facebook"
+              >
+                <Facebook className="w-3.5 h-3.5" />
+              </a>
+              <a
+                href="https://linkedin.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1.5 rounded-lg bg-slate-900 hover:bg-[#0A66C2]/20 text-slate-400 hover:text-[#0A66C2] border border-slate-800 transition-colors"
+                title="LinkedIn"
+                aria-label="LinkedIn"
+              >
+                <Linkedin className="w-3.5 h-3.5" />
+              </a>
+            </div>
+
+            <span className="text-slate-700 hidden sm:inline">|</span>
+
             <a 
               href="https://app.netlify.com/projects/delta-support-net/deploys" 
               target="_blank" 
@@ -267,13 +320,13 @@ export const Footer: React.FC<FooterProps> = ({
                 referrerPolicy="no-referrer"
               />
             </a>
-            <span className="text-slate-600 hidden sm:inline">|</span>
-            <span className="flex items-center gap-1 text-emerald-400">
+            <span className="text-slate-700 hidden sm:inline">|</span>
+            <span className="flex items-center gap-1 text-emerald-400 font-semibold">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span>NOC ONLINE (24/7 HELPLINE)</span>
             </span>
-            <span className="text-slate-600">|</span>
-            <span className="text-slate-400">01700-000000</span>
+            <span className="text-slate-700">|</span>
+            <span className="text-slate-300 font-bold">01700-000000</span>
           </div>
         </div>
 

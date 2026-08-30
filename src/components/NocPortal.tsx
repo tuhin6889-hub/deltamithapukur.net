@@ -266,16 +266,16 @@ export const NocPortal: React.FC<NocPortalProps> = ({
         <div className="flex items-center gap-4">
           <DeltaLogo size="lg" theme="dark" showTagline={true} />
 
-          <div className="border-l border-slate-800 pl-4 hidden md:block">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-mono text-[11px] uppercase tracking-wider font-extrabold bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+          <div className="border-l border-slate-800 pl-4 sm:pl-5 hidden md:block">
+            <div className="flex items-center gap-3 sm:gap-4 flex-wrap mb-2">
+              <span className="font-mono text-[11px] uppercase tracking-wider font-extrabold bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-sm">
                 <span className="w-2 h-2 rounded-full bg-teal-400 animate-ping" />
                 NOC PRO COMMAND CENTER
               </span>
-              <span className="text-xs text-slate-400 font-mono">Delta Mithapukur Central POP</span>
+              <span className="text-xs text-slate-300 font-mono tracking-wide">Delta Mithapukur Central POP</span>
             </div>
             
-            <h1 className="text-xl md:text-2xl font-extrabold tracking-tight mt-0.5 bg-gradient-to-r from-white via-slate-200 to-teal-300 bg-clip-text text-transparent">
+            <h1 className="text-xl md:text-2xl font-extrabold tracking-tight mt-1.5 bg-gradient-to-r from-white via-slate-200 to-teal-300 bg-clip-text text-transparent">
               {lang === 'bn' ? 'নেটওয়ার্ক অপারেশনস সেন্টার (নোক প্রোল পোর্টাল)' : 'Network Operations Center Portal'}
             </h1>
           </div>

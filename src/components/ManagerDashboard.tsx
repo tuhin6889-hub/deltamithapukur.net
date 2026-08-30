@@ -490,16 +490,16 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <DeltaLogo size="lg" theme="dark" showTagline={true} />
             
-            <div className="border-l border-slate-700/80 pl-4 hidden sm:block">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 font-mono text-xs font-bold border border-emerald-500/30">
+            <div className="border-l border-slate-700/80 pl-4 sm:pl-5 hidden sm:block">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-2">
+                <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 font-mono text-xs font-bold border border-emerald-500/30 shadow-sm">
                   FULL MANAGER ACCESS
                 </span>
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-slate-300 font-medium tracking-wide">
                   {lang === 'bn' ? 'মিঠাপুকুর সেন্ট্রাল শাখা ড্যাশবোর্ড' : 'Mithapukur Branch HQ'}
                 </span>
               </div>
-              <h1 className="text-xl md:text-2xl font-extrabold tracking-tight">
+              <h1 className="text-xl md:text-2xl font-extrabold tracking-tight mt-1.5 text-white">
                 {lang === 'bn' ? 'সাপোর্ট ও নোক কন্ট্রোল সেন্টার' : 'Support & NOC Control Center'}
               </h1>
             </div>

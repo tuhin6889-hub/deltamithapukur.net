@@ -857,6 +857,7 @@ export default function App() {
         onOpenAddNewClient={() => setIsNewClientModalOpen(true)}
         onOpenAndroidInstall={() => setIsAndroidInstallModalOpen(true)}
         onGoHome={handleGoHome}
+        onSelectTicket={(ticket) => setSelectedTicket(ticket)}
         isOnline={isOnline}
         isSimulatedOffline={isSimulatedOffline}
         onToggleSimulateOffline={handleToggleSimulateOffline}

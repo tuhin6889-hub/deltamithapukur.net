@@ -194,10 +194,10 @@ export const UnifiedLoginPage: React.FC<UnifiedLoginPageProps> = ({
       {/* Navigation Header */}
       <nav className="relative z-10 px-6 sm:px-12 pt-8 pb-4 flex flex-col sm:flex-row justify-between items-start gap-4">
         <div className="brand-cluster">
-          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#6366f1] font-medium block">
+          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#6366f1] font-medium block mb-1">
             {lang === 'bn' ? 'সিস্টেমেটিক অপারেশন্স' : 'Systematic Operations'}
           </span>
-          <h1 className="font-syne font-extrabold text-4xl sm:text-5xl lg:text-6xl tracking-[-0.06em] leading-[0.88] uppercase text-[#f0f0f5] my-2">
+          <h1 className="font-syne font-extrabold text-4xl sm:text-5xl lg:text-6xl tracking-[-0.04em] leading-[1.05] uppercase text-[#f0f0f5] my-2">
             Delta <br />
             Mithapukur
           </h1>
