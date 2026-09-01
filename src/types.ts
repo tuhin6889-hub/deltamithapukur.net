@@ -62,6 +62,22 @@ export interface ClientInfo {
   opticalPower: string;
   balance: number;
   status: 'Active' | 'Suspended';
+  // New Client Specific Technical, Billing & Network Fields
+  userName?: string; // PPPoE / User Login Name
+  password?: string; // PPPoE / Portal Password
+  onuOwner?: 'Client' | 'Office'; // ONU Ownership
+  popName?: string; // POP Node / Central Station
+  zoneName?: string; // Zone Area e.g. Zone-A (Hospital Rd)
+  monthlyBill?: number; // Monthly Charge BDT
+  billType?: 'bKash' | 'Nagad' | 'Cash' | 'Bank'; // Payment Gateway / Method
+  routerMac?: string; // WiFi Router MAC Address
+  ipType?: 'Real IP' | 'Shared IP' | 'Static IP'; // IP Assignment Type
+  nidNumber?: string; // National ID / Smart NID
+  nidDocument?: string; // Base64 or File Name of Uploaded NID
+  gpsCoordinates?: string; // Lat-Lng (e.g., 25.5782, 89.2844)
+  remoteUserName?: string; // Remote Management Username
+  remotePassword?: string; // Remote Management Password
+  remarks?: string; // Installation notes / Cable meters / Technician remark
 }
 
 export interface NocStaff {
@@ -189,5 +205,65 @@ export interface MotherSiteSyncConfig {
   syncedSubscribersCount: number;
   syncedCampaignsCount: number;
   pendingLeadsCount: number;
+}
+
+export type InventoryCategory =
+  | 'Router'
+  | 'ONU'
+  | 'Fiber_Cable'
+  | 'Patch_Cord'
+  | 'SFP_Module'
+  | 'TJ_Box'
+  | 'Splitter'
+  | 'Media_Converter'
+  | 'Tools_Accessories';
+
+export type InventoryStockStatus = 'In_Stock' | 'Low_Stock' | 'Out_of_Stock';
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category: InventoryCategory;
+  brand: string;
+  model: string;
+  location: string; // e.g. "Mithapukur Central Store", "Pairaband POP-02 Locker", "Ranipukur Field Van #1", "Shatibari Sub-Hub"
+  totalStock: number;
+  allocatedCount: number; // Dispatched or in-field
+  availableStock: number; // totalStock - allocatedCount
+  minThreshold: number; // Threshold for NOC low stock alerts
+  unit: 'pcs' | 'reels' | 'meters' | 'box' | 'pkts' | 'rolls' | 'sets';
+  unitPrice: number; // in BDT ৳
+  status: InventoryStockStatus;
+  lastRestocked: string;
+  serialNumbers?: string[];
+  assignedToStaff?: string;
+  sku?: string;
+  shelfNumber?: string;
+  notes?: string;
+}
+
+export type InventoryActionType =
+  | 'RESTOCK'
+  | 'DISPATCH_FIELD'
+  | 'CLIENT_INSTALL'
+  | 'REPLACE_FAULTY'
+  | 'RETURN_DEFECTIVE'
+  | 'AUDIT_ADJUST';
+
+export interface InventoryLog {
+  id: string;
+  itemId: string;
+  itemName: string;
+  category: InventoryCategory;
+  action: InventoryActionType;
+  quantity: number;
+  unit: string;
+  performedBy: string; // e.g. "Engr. Tanvir Ahmed (NOC Team)"
+  targetRecipient?: string; // e.g. "NOC Field Van #1" or "CID-1003 (Kamal Hossain)"
+  ticketId?: string;
+  previousStock: number;
+  newStock: number;
+  timestamp: string;
+  notes?: string;
 }
 

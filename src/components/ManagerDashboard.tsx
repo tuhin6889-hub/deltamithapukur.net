@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Ticket, ClientInfo, NocStaff, TicketStatus, TicketPriority, NotificationLog, NetworkServer } from '../types';
-import { INITIAL_SERVERS } from '../data/mockData';
+import { Ticket, ClientInfo, NocStaff, TicketStatus, TicketPriority, NotificationLog, NetworkServer, InventoryItem, InventoryLog } from '../types';
+import { INITIAL_SERVERS, INITIAL_INVENTORY, INITIAL_INVENTORY_LOGS } from '../data/mockData';
 import { DeltaLogo } from './DeltaLogo';
 import { WorkOrderModal } from './WorkOrderModal';
 import { TicketStatusBadge } from './TicketStatusBadge';
@@ -10,6 +10,7 @@ import { NetworkServerManager } from './NetworkServerManager';
 import { MonthSummaryAnalytics } from './MonthSummaryAnalytics';
 import { WeeklyResolutionChart } from './WeeklyResolutionChart';
 import { NocStaffPerformanceDashboard } from './NocStaffPerformanceDashboard';
+import { InventoryManager } from './InventoryManager';
 import { 
   CheckCircle2, 
   Check,
@@ -52,6 +53,7 @@ import {
   Map,
   Navigation,
   Globe,
+  Package,
   X
 } from 'lucide-react';
 import {
@@ -74,6 +76,8 @@ interface ManagerDashboardProps {
   nocStaff: NocStaff[];
   notifications: NotificationLog[];
   servers?: NetworkServer[];
+  inventory?: InventoryItem[];
+  inventoryLogs?: InventoryLog[];
   lang: 'bn' | 'en';
   onSelectTicket: (ticket: Ticket) => void;
   onUpdateTicketStatus: (ticketId: string, status: TicketStatus) => void;
@@ -86,7 +90,20 @@ interface ManagerDashboardProps {
   onAddServer?: (server: NetworkServer) => void;
   onUpdateServer?: (server: NetworkServer) => void;
   onDeleteServer?: (serverId: string) => void;
-  currentUser?: { username: string; name: string } | null;
+  onAddInventoryItem?: (item: InventoryItem) => void;
+  onUpdateInventoryItem?: (item: InventoryItem) => void;
+  onDeleteInventoryItem?: (itemId: string) => void;
+  onRestockItem?: (itemId: string, quantity: number, notes?: string, performedBy?: string) => void;
+  onDispatchItem?: (
+    itemId: string, 
+    quantity: number, 
+    targetRecipient: string, 
+    actionType: 'DISPATCH_FIELD' | 'CLIENT_INSTALL' | 'REPLACE_FAULTY',
+    ticketId?: string,
+    notes?: string, 
+    performedBy?: string
+  ) => void;
+  currentUser?: { username: string; name: string; role?: string } | null;
   onLogout?: () => void;
 }
 
@@ -96,6 +113,8 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   nocStaff,
   notifications,
   servers = INITIAL_SERVERS,
+  inventory = INITIAL_INVENTORY,
+  inventoryLogs = INITIAL_INVENTORY_LOGS,
   lang,
   onSelectTicket,
   onUpdateTicketStatus,
@@ -108,13 +127,23 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   onAddServer,
   onUpdateServer,
   onDeleteServer,
+  onAddInventoryItem = () => {},
+  onUpdateInventoryItem = () => {},
+  onDeleteInventoryItem = () => {},
+  onRestockItem = () => {},
+  onDispatchItem = () => {},
   currentUser,
   onLogout,
 }) => {
-  const [activeTab, setActiveTab] = useState<'KPI_DASHBOARD' | 'TICKETS' | 'NOC_PERFORMANCE' | 'NOC_STAFF' | 'CLIENTS' | 'SERVERS' | 'BROADCAST'>('KPI_DASHBOARD');
+  const [activeTab, setActiveTab] = useState<'KPI_DASHBOARD' | 'TICKETS' | 'INVENTORY' | 'NOC_PERFORMANCE' | 'NOC_STAFF' | 'CLIENTS' | 'SERVERS' | 'BROADCAST'>('KPI_DASHBOARD');
   const [nocStaffSubView, setNocStaffSubView] = useState<'ROSTER' | 'PERFORMANCE'>('PERFORMANCE');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Low stock counter for inventory tab badge
+  const lowStockCount = useMemo(() => {
+    return inventory.filter(item => item.availableStock <= item.minThreshold).length;
+  }, [inventory]);
 
   // Bulk Ticket Selection State
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([]);
@@ -148,6 +177,16 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
       badgeClass: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
       descriptionBn: 'ISP নেটওয়ার্ক এনালাইটিক্স',
       descriptionEn: 'Network analytics & trends',
+    },
+    {
+      id: 'INVENTORY' as const,
+      labelBn: 'হার্ডওয়্যার ও স্পেয়ার্স ইনভেন্টরি',
+      labelEn: 'Hardware & Inventory',
+      icon: Package,
+      badge: lowStockCount > 0 ? `${lowStockCount} Alert` : `${inventory.length} SKUs`,
+      badgeClass: lowStockCount > 0 ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+      descriptionBn: 'রাউটার, ওএনইউ, অপটিক্যাল ফাইবার স্টক',
+      descriptionEn: 'Routers, ONUs, Fiber drop cable stocks',
     },
     {
       id: 'NOC_PERFORMANCE' as const,
@@ -2228,6 +2267,25 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
       )}
         </main>
       </div>
+
+      {/* Hardware & Spares Inventory Tab View */}
+      {activeTab === 'INVENTORY' && (
+        <div className="space-y-6">
+          <InventoryManager
+            inventory={inventory}
+            inventoryLogs={inventoryLogs}
+            nocStaff={nocStaff}
+            clients={clients}
+            lang={lang}
+            onAddInventoryItem={onAddInventoryItem}
+            onUpdateInventoryItem={onUpdateInventoryItem}
+            onDeleteInventoryItem={onDeleteInventoryItem}
+            onRestockItem={onRestockItem}
+            onDispatchItem={onDispatchItem}
+            currentUser={currentUser}
+          />
+        </div>
+      )}
 
       {/* Printable Optical Field Work Order Modal */}
       <WorkOrderModal

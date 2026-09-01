@@ -31,7 +31,10 @@ import {
   PhoneCall,
   Flame,
   QrCode,
-  Camera
+  Camera,
+  Maximize2,
+  Minimize2,
+  Package
 } from 'lucide-react';
 
 interface StaffUser {
@@ -64,6 +67,8 @@ interface NavbarProps {
   onOpenAndroidInstall?: () => void;
   onOpenRouterQrSticker?: () => void;
   onOpenRouterQrScanner?: () => void;
+  onOpenInventory?: () => void;
+  inventoryLowStockCount?: number;
   onSelectTicket?: (ticket: Ticket) => void;
   // Offline Cache & Sync Props
   isOnline?: boolean;
@@ -100,6 +105,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAndroidInstall,
   onOpenRouterQrSticker,
   onOpenRouterQrScanner,
+  onOpenInventory,
+  inventoryLowStockCount = 0,
   onSelectTicket,
   isOnline = true,
   isSimulatedOffline = false,
@@ -115,8 +122,32 @@ export const Navbar: React.FC<NavbarProps> = ({
   // Global Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  // Fullscreen event listener
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const handleToggleFullscreen = () => {
+    try {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen?.().catch(() => {});
+        setIsFullscreen(true);
+      } else {
+        document.exitFullscreen?.().catch(() => {});
+        setIsFullscreen(false);
+      }
+    } catch (e) {
+      console.warn('Fullscreen request:', e);
+    }
+  };
 
   // Keyboard Shortcut: Ctrl+K / Cmd+K / "/" to focus search
   useEffect(() => {
@@ -465,25 +496,43 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
-            {/* Mobile View Toggle */}
-            <div className="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700 text-xs">
+            {/* Desktop Full Screen / Smartphone Screen & Native Fullscreen Switcher */}
+            <div className="flex items-center bg-slate-800/90 p-0.5 rounded-xl border border-slate-700 text-xs shadow-inner">
               <button
                 onClick={() => setDeviceMode('DESKTOP')}
-                title="Desktop Web Dashboard"
-                className={`p-1.5 rounded-md transition-all ${
-                  deviceMode === 'DESKTOP' ? 'bg-slate-700 text-emerald-400' : 'text-slate-400 hover:text-slate-200'
+                title={lang === 'bn' ? 'ডেস্কটপ ফুল স্ক্রিন মোড (Desktop Full Screen)' : 'Desktop Full Screen Mode'}
+                className={`flex items-center gap-1 px-2 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                  deviceMode === 'DESKTOP'
+                    ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-400/40'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/60'
                 }`}
               >
-                <Monitor className="w-4 h-4" />
+                <Monitor className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline text-[11px]">{lang === 'bn' ? 'ডেস্কটপ' : 'Desktop'}</span>
               </button>
+
               <button
                 onClick={() => setDeviceMode('ANDROID')}
-                title="Android App Preview Mode"
-                className={`p-1.5 rounded-md transition-all ${
-                  deviceMode === 'ANDROID' ? 'bg-slate-700 text-emerald-400' : 'text-slate-400 hover:text-slate-200'
+                title={lang === 'bn' ? 'স্মার্টফোন মোবাইল স্ক্রিন মোড (Smartphone Mode)' : 'Smartphone Mobile View'}
+                className={`flex items-center gap-1 px-2 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                  deviceMode === 'ANDROID'
+                    ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-400/40'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/60'
                 }`}
               >
-                <Smartphone className="w-4 h-4" />
+                <Smartphone className="w-3.5 h-3.5" />
+                <span className="hidden xl:inline text-[11px]">{lang === 'bn' ? 'স্মার্টফোন' : 'Mobile'}</span>
+              </button>
+
+              {/* Native Browser Fullscreen expand button */}
+              <button
+                onClick={handleToggleFullscreen}
+                title={isFullscreen 
+                  ? (lang === 'bn' ? 'ফুলস্ক্রিন থেকে বের হন' : 'Exit Fullscreen') 
+                  : (lang === 'bn' ? 'ব্রাউজার ফুলস্ক্রিন করুন' : 'Full Screen View')}
+                className="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-700/60 rounded-lg transition-all cursor-pointer"
+              >
+                {isFullscreen ? <Minimize2 className="w-3.5 h-3.5 text-emerald-400" /> : <Maximize2 className="w-3.5 h-3.5" />}
               </button>
             </div>
 
@@ -614,6 +663,25 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <Database className="w-3.5 h-3.5 text-sky-400" />
                     <span>{lang === 'bn' ? 'ক্লায়েন্ট ডাটাবেজ' : 'Client Database'}</span>
                     <span className="px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 text-[10px] font-mono border border-sky-500/30">DB</span>
+                  </button>
+                )}
+
+                {/* Hardware & Spares Inventory Button */}
+                {onOpenInventory && (
+                  <button
+                    onClick={onOpenInventory}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-emerald-300 rounded-xl border border-emerald-500/30 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer whitespace-nowrap hover:border-emerald-500/60 relative"
+                    title="Hardware & Spares Inventory Tracker (Routers, ONUs, Fiber Drop Cables, SFP Transceivers)"
+                  >
+                    <Package className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>{lang === 'bn' ? 'ইনভেন্টরি ও স্পেয়ার্স' : 'Hardware Inventory'}</span>
+                    {inventoryLowStockCount > 0 ? (
+                      <span className="px-1.5 py-0.2 rounded-full bg-rose-600 text-white text-[10px] font-bold animate-pulse shadow-sm">
+                        {inventoryLowStockCount} {lang === 'bn' ? 'অ্যালার্ট' : 'Alert'}
+                      </span>
+                    ) : (
+                      <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-mono border border-emerald-500/30">STOCK</span>
+                    )}
                   </button>
                 )}
 

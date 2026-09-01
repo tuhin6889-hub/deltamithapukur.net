@@ -17,7 +17,9 @@ import {
   Activity,
   Zap,
   QrCode,
-  Camera
+  Camera,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 
 interface UnifiedLoginPageProps {
@@ -78,6 +80,30 @@ export const UnifiedLoginPage: React.FC<UnifiedLoginPageProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [staffError, setStaffError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Fullscreen event listener
+  React.useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, []);
+
+  const handleToggleFullscreen = () => {
+    try {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen?.().catch(() => {});
+        setIsFullscreen(true);
+      } else {
+        document.exitFullscreen?.().catch(() => {});
+        setIsFullscreen(false);
+      }
+    } catch (e) {
+      console.warn('Fullscreen error:', e);
+    }
+  };
 
   // Client Login Submit (Either CID or WhatsApp/Phone)
   const handleClientSubmit = (e: React.FormEvent) => {
@@ -207,10 +233,19 @@ export const UnifiedLoginPage: React.FC<UnifiedLoginPageProps> = ({
           </h1>
         </div>
 
-        <div className="flex items-center gap-4 sm:mt-3 self-end sm:self-start">
+        <div className="flex items-center gap-2.5 sm:mt-3 self-end sm:self-start">
           <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-[#6366f1] font-medium hidden md:block">
             NOC Portal // v.2.4
           </div>
+
+          <button
+            onClick={handleToggleFullscreen}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-white/[0.03] hover:bg-white/[0.08] border border-[rgba(240,240,245,0.12)] font-mono text-[11px] font-bold text-[#f0f0f5] transition-all cursor-pointer"
+            title={isFullscreen ? (lang === 'bn' ? 'ফুলস্ক্রিন বন্ধ' : 'Exit Fullscreen') : (lang === 'bn' ? 'ডেস্কটপ ফুলস্ক্রিন' : 'Fullscreen')}
+          >
+            {isFullscreen ? <Minimize2 className="w-3.5 h-3.5 text-emerald-400" /> : <Maximize2 className="w-3.5 h-3.5 text-[#6366f1]" />}
+            <span className="hidden sm:inline">{isFullscreen ? (lang === 'bn' ? 'স্বাভাবিক' : 'Exit') : (lang === 'bn' ? 'ফুলস্ক্রিন' : 'Fullscreen')}</span>
+          </button>
           
           <button
             onClick={onToggleLang}

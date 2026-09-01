@@ -9,9 +9,19 @@ import {
   TicketStatus, 
   TicketPriority, 
   TicketCategory,
-  NetworkServer
+  NetworkServer,
+  InventoryItem,
+  InventoryLog
 } from './types';
-import { INITIAL_CLIENTS, INITIAL_NOC_STAFF, INITIAL_TICKETS, INITIAL_NOTIFICATIONS, INITIAL_SERVERS } from './data/mockData';
+import { 
+  INITIAL_CLIENTS, 
+  INITIAL_NOC_STAFF, 
+  INITIAL_TICKETS, 
+  INITIAL_NOTIFICATIONS, 
+  INITIAL_SERVERS,
+  INITIAL_INVENTORY,
+  INITIAL_INVENTORY_LOGS
+} from './data/mockData';
 import { 
   loadCachedTickets, 
   saveCachedTickets, 
@@ -21,6 +31,10 @@ import {
   saveCachedServers, 
   loadCachedNotifications, 
   saveCachedNotifications,
+  loadCachedInventory,
+  saveCachedInventory,
+  loadCachedInventoryLogs,
+  saveCachedInventoryLogs,
   queueOfflineAction,
   loadOfflineQueue,
   clearOfflineQueue
@@ -44,6 +58,7 @@ import { AndroidInstallModal } from './components/AndroidInstallModal';
 import { RouterQrStickerModal } from './components/RouterQrStickerModal';
 import { RouterQrScannerModal } from './components/RouterQrScannerModal';
 import { QuickRouterTicketModal } from './components/QuickRouterTicketModal';
+import { InventoryTrackingModal } from './components/InventoryTrackingModal';
 import { StaffToolbar } from './components/StaffToolbar';
 import { Footer } from './components/Footer';
 import { StatusFeedbackToast, StatusFeedbackData } from './components/StatusFeedbackToast';
@@ -56,7 +71,10 @@ export default function App() {
   const [nocStaff] = useState<NocStaff[]>(INITIAL_NOC_STAFF);
   const [notifications, setNotifications] = useState<NotificationLog[]>(() => loadCachedNotifications(INITIAL_NOTIFICATIONS));
   const [servers, setServers] = useState<NetworkServer[]>(() => loadCachedServers(INITIAL_SERVERS));
+  const [inventory, setInventory] = useState<InventoryItem[]>(() => loadCachedInventory(INITIAL_INVENTORY));
+  const [inventoryLogs, setInventoryLogs] = useState<InventoryLog[]>(() => loadCachedInventoryLogs(INITIAL_INVENTORY_LOGS));
   const [statusFeedback, setStatusFeedback] = useState<StatusFeedbackData | null>(null);
+  const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
 
   // Real-time Network Connectivity & Offline Cache State
   const [isOnline, setIsOnline] = useState<boolean>(() => typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -79,6 +97,17 @@ export default function App() {
   useEffect(() => {
     saveCachedNotifications(notifications);
   }, [notifications]);
+
+  useEffect(() => {
+    saveCachedInventory(inventory);
+  }, [inventory]);
+
+  useEffect(() => {
+    saveCachedInventoryLogs(inventoryLogs);
+  }, [inventoryLogs]);
+
+  // Count low stock items for badge alerts across Manager & NOC portals
+  const inventoryLowStockCount = inventory.filter(item => item.availableStock <= item.minThreshold).length;
 
   // Online / Offline Network Listeners
   useEffect(() => {
@@ -175,6 +204,144 @@ export default function App() {
       message: `${serverId} ${lang === 'bn' ? 'সফলভাবে ইনভেন্টরি থেকে অপসারিত হয়েছে।' : 'removed from server inventory.'}`,
       cid: serverId,
       ticketId: serverId,
+    });
+  };
+
+  // Inventory Management Handlers
+  const handleAddInventoryItem = (item: InventoryItem) => {
+    setInventory(prev => [item, ...prev]);
+    const newLog: InventoryLog = {
+      id: `log_${Date.now()}`,
+      itemId: item.id,
+      itemName: item.name,
+      category: item.category,
+      action: 'RESTOCK',
+      quantity: item.availableStock,
+      unit: item.unit,
+      performedBy: managerUser?.name || nocUser?.name || 'NOC Storekeeper',
+      previousStock: 0,
+      newStock: item.availableStock,
+      notes: 'Initial inventory item SKU creation',
+      timestamp: new Date().toISOString(),
+    };
+    setInventoryLogs(prev => [newLog, ...prev]);
+    setStatusFeedback({
+      type: 'RESOLVED',
+      title: lang === 'bn' ? 'ইনভেন্টরি আইটেম যোগ হয়েছে' : 'Hardware SKU Registered',
+      message: `${item.name} (${item.sku || item.id}) - ${item.availableStock} ${item.unit} ${lang === 'bn' ? 'স্টকে যোগ করা হয়েছে।' : 'added to warehouse.'}`,
+    });
+  };
+
+  const handleUpdateInventoryItem = (updatedItem: InventoryItem) => {
+    setInventory(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
+    setStatusFeedback({
+      type: 'RESOLVED',
+      title: lang === 'bn' ? 'ইনভেন্টরি আইটেম আপডেট হয়েছে' : 'Hardware SKU Updated',
+      message: `${updatedItem.name} (${updatedItem.sku || updatedItem.id}) ${lang === 'bn' ? 'রেকর্ড সংরক্ষিত হয়েছে।' : 'saved successfully.'}`,
+    });
+  };
+
+  const handleDeleteInventoryItem = (itemId: string) => {
+    const item = inventory.find(i => i.id === itemId);
+    setInventory(prev => prev.filter(i => i.id !== itemId));
+    setStatusFeedback({
+      type: 'AUTO_AI',
+      title: lang === 'bn' ? 'ইনভেন্টরি আইটেম অপসারিত' : 'SKU Item Removed',
+      message: `${item?.name || itemId} ${lang === 'bn' ? 'ইনভেন্টরি তালিকা থেকে মুছে ফেলা হয়েছে।' : 'deleted from inventory list.'}`,
+    });
+  };
+
+  const handleRestockInventoryItem = (itemId: string, quantity: number, notes?: string, performedBy?: string) => {
+    const item = inventory.find(i => i.id === itemId);
+    if (!item) return;
+
+    const prevStock = item.availableStock;
+    const newStock = item.availableStock + quantity;
+    setInventory(prev => prev.map(i => i.id === itemId ? { ...i, availableStock: newStock, totalStock: i.totalStock + quantity } : i));
+
+    const newLog: InventoryLog = {
+      id: `log_${Date.now()}`,
+      itemId: item.id,
+      itemName: item.name,
+      category: item.category,
+      action: 'RESTOCK',
+      quantity: quantity,
+      unit: item.unit,
+      performedBy: performedBy || managerUser?.name || nocUser?.name || 'NOC Storekeeper',
+      previousStock: prevStock,
+      newStock: newStock,
+      notes: notes || (lang === 'bn' ? `স্টক রিস্টক: +${quantity} ${item.unit}` : `Restocked +${quantity} ${item.unit}`),
+      timestamp: new Date().toISOString(),
+    };
+    setInventoryLogs(prev => [newLog, ...prev]);
+
+    setStatusFeedback({
+      type: 'RESOLVED',
+      title: lang === 'bn' ? 'স্টক সফলভাবে বৃদ্ধি করা হয়েছে' : 'Stock Replenished',
+      message: `${item.name}: +${quantity} ${item.unit} (${lang === 'bn' ? 'বর্তমান স্টক' : 'New Balance'}: ${newStock} ${item.unit})`,
+    });
+  };
+
+  const handleDispatchInventoryItem = (
+    itemId: string,
+    quantity: number,
+    targetRecipient: string,
+    actionType: 'DISPATCH_FIELD' | 'CLIENT_INSTALL' | 'REPLACE_FAULTY',
+    ticketId?: string,
+    notes?: string,
+    performedBy?: string
+  ) => {
+    const item = inventory.find(i => i.id === itemId);
+    if (!item) return;
+
+    if (item.availableStock < quantity) {
+      setStatusFeedback({
+        type: 'FAILED',
+        title: lang === 'bn' ? 'অপর্যাপ্ত স্টক' : 'Insufficient Stock',
+        message: `${item.name} ${lang === 'bn' ? 'স্টকে মাত্র' : 'only has'} ${item.availableStock} ${item.unit} ${lang === 'bn' ? 'রয়েছে।' : 'available.'}`,
+      });
+      return;
+    }
+
+    const prevStock = item.availableStock;
+    const newStock = item.availableStock - quantity;
+    const newAllocated = item.allocatedCount + quantity;
+    setInventory(prev => prev.map(i => i.id === itemId ? { ...i, availableStock: newStock, allocatedCount: newAllocated } : i));
+
+    const newLog: InventoryLog = {
+      id: `log_${Date.now()}`,
+      itemId: item.id,
+      itemName: item.name,
+      category: item.category,
+      action: actionType,
+      quantity: quantity,
+      unit: item.unit,
+      targetRecipient,
+      ticketId,
+      performedBy: performedBy || managerUser?.name || nocUser?.name || 'NOC Team',
+      previousStock: prevStock,
+      newStock: newStock,
+      notes: notes || `${actionType} to ${targetRecipient}`,
+      timestamp: new Date().toISOString(),
+    };
+    setInventoryLogs(prev => [newLog, ...prev]);
+
+    // If tied to a ticket, automatically append an internal NOC comment to that ticket!
+    if (ticketId) {
+      handleAddComment(
+        ticketId, 
+        `📦 [হার্ডওয়্যার স্টক ইস্যু] ${item.name} (${quantity} ${item.unit}) -> গ্রহীতা: ${targetRecipient}। (ইস্যুকারী: ${performedBy || 'NOC'})`
+      );
+    }
+
+    const isNowLow = newStock <= item.minThreshold;
+
+    setStatusFeedback({
+      type: isNowLow ? 'AUTO_AI' : 'RESOLVED',
+      title: isNowLow 
+        ? (lang === 'bn' ? 'সতর্কতা: স্টক কমে গেছে!' : 'Low Stock Alert Triggered!')
+        : (lang === 'bn' ? 'হার্ডওয়্যার সফলভাবে ইস্যু করা হয়েছে' : 'Hardware Dispatched Successfully'),
+      message: `${item.name} (${quantity} ${item.unit}) -> ${targetRecipient}. ${lang === 'bn' ? 'অবশিষ্ট স্টক' : 'Remaining'}: ${newStock} ${item.unit}`,
     });
   };
 
@@ -775,6 +942,8 @@ export default function App() {
           nocStaff={nocStaff}
           notifications={notifications}
           servers={servers}
+          inventory={inventory}
+          inventoryLogs={inventoryLogs}
           lang={lang}
           onSelectTicket={(ticket) => setSelectedTicket(ticket)}
           onUpdateTicketStatus={handleUpdateTicketStatus}
@@ -787,6 +956,11 @@ export default function App() {
           onAddServer={handleAddServer}
           onUpdateServer={handleUpdateServer}
           onDeleteServer={handleDeleteServer}
+          onAddInventoryItem={handleAddInventoryItem}
+          onUpdateInventoryItem={handleUpdateInventoryItem}
+          onDeleteInventoryItem={handleDeleteInventoryItem}
+          onRestockItem={handleRestockInventoryItem}
+          onDispatchItem={handleDispatchInventoryItem}
           currentUser={managerUser}
           onLogout={() => handleStaffLogout('MANAGER')}
         />
@@ -808,6 +982,9 @@ export default function App() {
         <NocPortal
           tickets={tickets}
           nocStaff={nocStaff}
+          inventory={inventory}
+          inventoryLowStockCount={inventoryLowStockCount}
+          onOpenInventory={() => setIsInventoryModalOpen(true)}
           lang={lang}
           onSelectTicket={(ticket) => setSelectedTicket(ticket)}
           onUpdateTicketStatus={handleUpdateTicketStatus}
@@ -926,6 +1103,8 @@ export default function App() {
         onOpenMotherWebsiteHub={() => setIsMotherWebsiteModalOpen(true)}
         onOpenAddNewClient={() => setIsNewClientModalOpen(true)}
         onOpenAndroidInstall={() => setIsAndroidInstallModalOpen(true)}
+        onOpenInventory={() => setIsInventoryModalOpen(true)}
+        inventoryLowStockCount={inventoryLowStockCount}
         onOpenRouterQrSticker={() => {
           setRouterStickerTargetCid(loggedInCid || null);
           setIsRouterQrStickerModalOpen(true);
@@ -993,6 +1172,7 @@ export default function App() {
             activeRole={currentRole}
             onSwitchRole={setCurrentRole}
             lang={lang}
+            onSwitchToDesktop={() => setDeviceMode('DESKTOP')}
           >
             {renderActivePortal()}
           </AndroidAppFrame>
@@ -1185,6 +1365,23 @@ export default function App() {
           setQuickTicketClient(null);
         }}
         lang={lang}
+      />
+
+      {/* Hardware & Spares Inventory Tracking Modal */}
+      <InventoryTrackingModal
+        isOpen={isInventoryModalOpen}
+        onClose={() => setIsInventoryModalOpen(false)}
+        inventory={inventory}
+        inventoryLogs={inventoryLogs}
+        nocStaff={nocStaff}
+        clients={clients}
+        lang={lang}
+        onAddInventoryItem={handleAddInventoryItem}
+        onUpdateInventoryItem={handleUpdateInventoryItem}
+        onDeleteInventoryItem={handleDeleteInventoryItem}
+        onRestockItem={handleRestockInventoryItem}
+        onDispatchItem={handleDispatchInventoryItem}
+        currentUser={managerUser || nocUser}
       />
 
       <StaffToolbar isEmployee={isEmployee} />

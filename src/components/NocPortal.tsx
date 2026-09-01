@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Ticket, NocStaff, TicketStatus, TicketPriority } from '../types';
+import { Ticket, NocStaff, TicketStatus, TicketPriority, InventoryItem } from '../types';
 import { DeltaLogo } from './DeltaLogo';
 import { TicketStatusBadge } from './TicketStatusBadge';
 import { TicketPriorityBadge, getPriorityColorConfig } from './TicketPriorityBadge';
@@ -33,12 +33,18 @@ import {
   Square,
   ListChecks,
   X,
-  Users
+  Users,
+  Package,
+  Box,
+  Truck
 } from 'lucide-react';
 
 interface NocPortalProps {
   tickets: Ticket[];
   nocStaff: NocStaff[];
+  inventory?: InventoryItem[];
+  inventoryLowStockCount?: number;
+  onOpenInventory?: () => void;
   lang: 'bn' | 'en';
   onSelectTicket: (ticket: Ticket) => void;
   onUpdateTicketStatus: (ticketId: string, status: TicketStatus) => void;
@@ -53,6 +59,9 @@ interface NocPortalProps {
 export const NocPortal: React.FC<NocPortalProps> = ({
   tickets,
   nocStaff,
+  inventory = [],
+  inventoryLowStockCount = 0,
+  onOpenInventory,
   lang,
   onSelectTicket,
   onUpdateTicketStatus,
@@ -662,6 +671,72 @@ export const NocPortal: React.FC<NocPortalProps> = ({
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* BENTO CARD 4: NOC Spares & Hardware Inventory Quick Alert Widget */}
+          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Package className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-mono font-bold text-sm text-emerald-300">
+                  {lang === 'bn' ? 'NOC হার্ডওয়্যার ও স্পেয়ার্স স্টক' : 'Hardware & Spares Stock'}
+                </h3>
+              </div>
+              {inventoryLowStockCount > 0 ? (
+                <span className="px-2 py-0.5 rounded-full bg-rose-600 text-white font-mono text-[10px] font-bold animate-pulse">
+                  {inventoryLowStockCount} {lang === 'bn' ? 'অ্যালার্ট' : 'LOW'}
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[10px] border border-emerald-500/30">
+                  HEALTHY
+                </span>
+              )}
+            </div>
+
+            <p className="text-xs text-slate-400">
+              {lang === 'bn' 
+                ? 'রাউটার, ওএনইউ ও ফাইবার ড্রপ ক্যাবল স্টক লেভেল। প্রয়োজনমতো ডিসপ্যাচ বা রিস্টক করুন।' 
+                : 'Live available stocks of routers, ONUs & optical fiber drop cables for installations.'}
+            </p>
+
+            {/* Quick Stock List */}
+            <div className="space-y-2">
+              {inventory.slice(0, 4).map((item) => {
+                const isLow = item.availableStock <= item.minThreshold;
+                return (
+                  <div 
+                    key={item.id}
+                    className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 text-xs ${
+                      isLow 
+                        ? 'bg-rose-950/30 border-rose-800/60 text-rose-200' 
+                        : 'bg-slate-950 border-slate-800/80 text-slate-300'
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-white truncate text-[11px]">{item.name}</p>
+                      <p className="text-[10px] text-slate-400 font-mono">{item.brand} • {item.location.split('(')[0]}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className={`font-mono font-bold ${isLow ? 'text-rose-400' : 'text-emerald-400'}`}>
+                        {item.availableStock} {item.unit}
+                      </span>
+                      <span className="text-[10px] text-slate-500 block">Min: {item.minThreshold}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {onOpenInventory && (
+              <button
+                onClick={onOpenInventory}
+                className="w-full py-2.5 bg-slate-800 hover:bg-emerald-600/30 hover:text-emerald-200 text-slate-300 border border-slate-700 hover:border-emerald-500/40 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+              >
+                <Package className="w-4 h-4 text-emerald-400" />
+                <span>{lang === 'bn' ? 'সম্পূর্ণ ইনভেন্টরি ট্র্যাকার খুলুন' : 'Open Hardware Inventory Tracker'}</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
         </div>

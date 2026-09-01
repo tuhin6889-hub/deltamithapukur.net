@@ -1,10 +1,12 @@
-import { Ticket, ClientInfo, NetworkServer, NotificationLog } from '../types';
+import { Ticket, ClientInfo, NetworkServer, NotificationLog, InventoryItem, InventoryLog } from '../types';
 
 export const CACHE_KEYS = {
   TICKETS: 'delta_isp_tickets_cache_v2',
   CLIENTS: 'delta_isp_clients_cache_v2',
   SERVERS: 'delta_isp_servers_cache_v2',
   NOTIFICATIONS: 'delta_isp_notifications_cache_v2',
+  INVENTORY: 'delta_isp_inventory_cache_v2',
+  INVENTORY_LOGS: 'delta_isp_inventory_logs_cache_v2',
   OFFLINE_QUEUE: 'delta_isp_offline_actions_queue_v2',
   LAST_SYNC: 'delta_isp_last_sync_timestamp',
   OFFLINE_SIMULATION: 'delta_isp_offline_sim_active',
@@ -97,6 +99,54 @@ export function saveCachedServers(servers: NetworkServer[]): void {
     localStorage.setItem(CACHE_KEYS.SERVERS, JSON.stringify(servers));
   } catch (e) {
     console.warn('[OfflineCache] Failed to save servers to cache:', e);
+  }
+}
+
+// Load cached inventory
+export function loadCachedInventory(defaultInventory: InventoryItem[]): InventoryItem[] {
+  try {
+    const raw = localStorage.getItem(CACHE_KEYS.INVENTORY);
+    if (!raw) return defaultInventory;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed;
+    }
+  } catch (e) {
+    console.warn('[OfflineCache] Failed to load inventory from cache:', e);
+  }
+  return defaultInventory;
+}
+
+// Save inventory to local cache
+export function saveCachedInventory(inventory: InventoryItem[]): void {
+  try {
+    localStorage.setItem(CACHE_KEYS.INVENTORY, JSON.stringify(inventory));
+  } catch (e) {
+    console.warn('[OfflineCache] Failed to save inventory to cache:', e);
+  }
+}
+
+// Load cached inventory logs
+export function loadCachedInventoryLogs(defaultLogs: InventoryLog[]): InventoryLog[] {
+  try {
+    const raw = localStorage.getItem(CACHE_KEYS.INVENTORY_LOGS);
+    if (!raw) return defaultLogs;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed;
+    }
+  } catch (e) {
+    console.warn('[OfflineCache] Failed to load inventory logs from cache:', e);
+  }
+  return defaultLogs;
+}
+
+// Save inventory logs to local cache
+export function saveCachedInventoryLogs(logs: InventoryLog[]): void {
+  try {
+    localStorage.setItem(CACHE_KEYS.INVENTORY_LOGS, JSON.stringify(logs));
+  } catch (e) {
+    console.warn('[OfflineCache] Failed to save inventory logs to cache:', e);
   }
 }
 

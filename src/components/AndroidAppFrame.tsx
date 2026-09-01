@@ -10,7 +10,8 @@ import {
   User, 
   Bell, 
   CheckCircle2, 
-  ArrowLeft 
+  ArrowLeft,
+  Monitor
 } from 'lucide-react';
 
 interface AndroidAppFrameProps {
@@ -18,6 +19,7 @@ interface AndroidAppFrameProps {
   activeRole: 'MANAGER' | 'NOC' | 'CLIENT';
   onSwitchRole: (role: 'MANAGER' | 'NOC' | 'CLIENT') => void;
   lang: 'bn' | 'en';
+  onSwitchToDesktop?: () => void;
 }
 
 export const AndroidAppFrame: React.FC<AndroidAppFrameProps> = ({
@@ -25,6 +27,7 @@ export const AndroidAppFrame: React.FC<AndroidAppFrameProps> = ({
   activeRole,
   onSwitchRole,
   lang,
+  onSwitchToDesktop,
 }) => {
   const [showApkModal, setShowApkModal] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -39,34 +42,47 @@ export const AndroidAppFrame: React.FC<AndroidAppFrameProps> = ({
   };
 
   return (
-    <div className="py-6 px-2 flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] bg-slate-950">
+    <div className="py-2 sm:py-6 px-0 sm:px-2 flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] bg-slate-950 w-full">
       
-      {/* Top Android App Mode Notice & APK Download Button */}
-      <div className="mb-4 text-center space-y-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-xs font-bold">
-          <Smartphone className="w-4 h-4" />
-          <span>{lang === 'bn' ? 'অ্যান্ড্রয়েড মোবাইল অ্যাপস ভিউ' : 'Android App Simulation View'}</span>
+      {/* Top Android App Mode Notice & Controls */}
+      <div className="mb-3 px-3 w-full max-w-[430px] flex flex-wrap items-center justify-between gap-2">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-400 text-xs font-bold">
+          <Smartphone className="w-3.5 h-3.5" />
+          <span>{lang === 'bn' ? 'স্মার্টফোন মোবাইল স্ক্রিন' : 'Smartphone View'}</span>
         </div>
 
-        <button
-          onClick={() => setShowApkModal(true)}
-          className="ml-2 px-3 py-1 bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-bold rounded-full text-xs shadow-md hover:brightness-110 transition-all inline-flex items-center gap-1.5"
-        >
-          <Download className="w-3.5 h-3.5" />
-          <span>{lang === 'bn' ? 'APK ডাউনলোড (v2.4)' : 'Download Android APK'}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {onSwitchToDesktop && (
+            <button
+              onClick={onSwitchToDesktop}
+              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold rounded-full text-xs transition-all border border-slate-700 flex items-center gap-1 shadow-sm cursor-pointer"
+              title={lang === 'bn' ? 'ডেস্কটপ ফুল স্ক্রিন মোডে যান' : 'Switch to Desktop Full Screen'}
+            >
+              <Monitor className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{lang === 'bn' ? 'ডেস্কটপ' : 'Desktop'}</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setShowApkModal(true)}
+            className="px-3 py-1 bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-bold rounded-full text-xs shadow-md hover:brightness-110 transition-all inline-flex items-center gap-1.5 cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>{lang === 'bn' ? 'APK' : 'APK'}</span>
+          </button>
+        </div>
       </div>
 
-      {/* Realistic Mobile Phone Mockup Outer Frame */}
-      <div className="w-full max-w-[410px] h-[820px] bg-slate-900 rounded-[48px] p-3 shadow-2xl border-4 border-slate-700 relative flex flex-col overflow-hidden shadow-emerald-950/20">
+      {/* Realistic Mobile Phone Mockup Outer Frame (Full-width on mobile screen, Mockup on desktop screen) */}
+      <div className="w-full sm:max-w-[420px] h-[calc(100dvh-6rem)] sm:h-[840px] bg-slate-900 rounded-none sm:rounded-[48px] p-0 sm:p-3 shadow-2xl border-0 sm:border-4 border-slate-700 relative flex flex-col overflow-hidden shadow-emerald-950/20">
         
-        {/* Phone Camera Hole/Notch */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-28 h-5 bg-slate-950 rounded-full z-50 flex items-center justify-center">
+        {/* Phone Camera Hole/Notch (Desktop preview only) */}
+        <div className="hidden sm:flex absolute top-4 left-1/2 -translate-x-1/2 w-28 h-5 bg-slate-950 rounded-full z-50 items-center justify-center">
           <div className="w-3 h-3 rounded-full bg-slate-800 border border-slate-700" />
         </div>
 
         {/* Top Android Status Bar */}
-        <div className="bg-slate-950 text-slate-200 px-6 pt-2.5 pb-1 flex items-center justify-between text-[11px] font-mono z-40 select-none">
+        <div className="bg-slate-950 text-slate-200 px-4 sm:px-6 pt-2 pb-1.5 flex items-center justify-between text-[11px] font-mono z-40 select-none border-b border-slate-800/60">
           <span>05:42 PM</span>
           <div className="flex items-center gap-2 text-slate-400">
             <Signal className="w-3.5 h-3.5 text-emerald-400" />
@@ -85,7 +101,7 @@ export const AndroidAppFrame: React.FC<AndroidAppFrameProps> = ({
         <div className="bg-slate-900 text-slate-300 py-2.5 px-4 border-t border-slate-800 flex items-center justify-around z-40">
           <button
             onClick={() => onSwitchRole('MANAGER')}
-            className={`flex flex-col items-center gap-0.5 text-[10px] font-bold transition-all ${
+            className={`flex flex-col items-center gap-0.5 text-[10px] font-bold transition-all cursor-pointer ${
               activeRole === 'MANAGER' ? 'text-emerald-400' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -95,7 +111,7 @@ export const AndroidAppFrame: React.FC<AndroidAppFrameProps> = ({
 
           <button
             onClick={() => onSwitchRole('NOC')}
-            className={`flex flex-col items-center gap-0.5 text-[10px] font-bold transition-all ${
+            className={`flex flex-col items-center gap-0.5 text-[10px] font-bold transition-all cursor-pointer ${
               activeRole === 'NOC' ? 'text-teal-400' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -105,7 +121,7 @@ export const AndroidAppFrame: React.FC<AndroidAppFrameProps> = ({
 
           <button
             onClick={() => onSwitchRole('CLIENT')}
-            className={`flex flex-col items-center gap-0.5 text-[10px] font-bold transition-all ${
+            className={`flex flex-col items-center gap-0.5 text-[10px] font-bold transition-all cursor-pointer ${
               activeRole === 'CLIENT' ? 'text-indigo-400' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
