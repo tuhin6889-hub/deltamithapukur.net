@@ -16,7 +16,8 @@ import {
   MapPin,
   CheckCircle2,
   Facebook,
-  Linkedin
+  Linkedin,
+  MessageCircle
 } from 'lucide-react';
 
 interface FooterProps {
@@ -86,7 +87,22 @@ export const Footer: React.FC<FooterProps> = ({
               </div>
 
               {/* Social Media Link Badges */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* WhatsApp Direct Support Badge */}
+                <a
+                  href="https://wa.me/8801719394430?text=Hello%20Delta%20Broadband%20Support"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-950/80 hover:bg-[#25D366]/20 text-emerald-300 hover:text-[#25D366] border border-emerald-800/60 hover:border-[#25D366]/60 transition-all text-xs font-medium group active:scale-95 shadow-sm"
+                  aria-label="Chat on WhatsApp (01719394430)"
+                  title="Chat with NOC Support on WhatsApp (01719394430)"
+                >
+                  <span className="w-2 h-2 rounded-full bg-[#25D366] animate-pulse" />
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-400 group-hover:text-[#25D366] transition-colors" />
+                  <span className="font-semibold text-xs">WhatsApp: 01719394430</span>
+                </a>
+
+                {/* Facebook Page Badge */}
                 <a
                   href="https://facebook.com"
                   target="_blank"
@@ -99,6 +115,7 @@ export const Footer: React.FC<FooterProps> = ({
                   <span className="font-semibold text-xs">Facebook</span>
                 </a>
 
+                {/* LinkedIn Badge */}
                 <a
                   href="https://linkedin.com"
                   target="_blank"
@@ -280,8 +297,22 @@ export const Footer: React.FC<FooterProps> = ({
           </div>
 
           <div className="flex items-center gap-3 text-[11px] flex-wrap justify-center sm:justify-end">
-            {/* Direct Social Links */}
+            {/* Direct Social & Chat Links */}
             <div className="flex items-center gap-1.5">
+              {/* WhatsApp Quick Chat */}
+              <a
+                href="https://wa.me/8801719394430?text=Hello%20Delta%20Broadband%20Support"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-emerald-950/80 hover:bg-[#25D366]/20 text-emerald-400 hover:text-[#25D366] border border-emerald-800/60 hover:border-[#25D366]/50 transition-colors"
+                title="WhatsApp Support (01719394430)"
+                aria-label="WhatsApp Support (01719394430)"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                <span className="font-sans font-semibold text-[10px]">WhatsApp</span>
+              </a>
+
+              {/* Facebook */}
               <a
                 href="https://facebook.com"
                 target="_blank"
@@ -292,6 +323,8 @@ export const Footer: React.FC<FooterProps> = ({
               >
                 <Facebook className="w-3.5 h-3.5" />
               </a>
+
+              {/* LinkedIn */}
               <a
                 href="https://linkedin.com"
                 target="_blank"
@@ -326,7 +359,26 @@ export const Footer: React.FC<FooterProps> = ({
               <span>NOC ONLINE (24/7 HELPLINE)</span>
             </span>
             <span className="text-slate-700">|</span>
-            <span className="text-slate-300 font-bold">01700-000000</span>
+            <div className="inline-flex items-center gap-1.5 bg-slate-900/80 px-2 py-1 rounded-lg border border-slate-800">
+              <a 
+                href="tel:01719394430" 
+                className="text-slate-200 hover:text-emerald-400 font-bold transition-colors inline-flex items-center gap-1"
+                title="Call Helpline: 01719394430"
+              >
+                <Phone className="w-3 h-3 text-emerald-400" />
+                <span>01719394430</span>
+              </a>
+              <a
+                href="https://wa.me/8801719394430?text=Hello%20Delta%20Broadband%20Support"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#25D366]/20 hover:bg-[#25D366] text-[#25D366] hover:text-slate-950 transition-all duration-200 shadow-sm active:scale-90"
+                title="Chat on WhatsApp (01719394430)"
+                aria-label="Chat on WhatsApp (01719394430)"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+              </a>
+            </div>
           </div>
         </div>
 

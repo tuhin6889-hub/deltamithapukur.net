@@ -21,7 +21,9 @@ import {
   ArrowRight,
   Sparkles,
   Mail,
-  Mic
+  Mic,
+  QrCode,
+  Camera
 } from 'lucide-react';
 
 interface ClientPortalProps {
@@ -34,6 +36,8 @@ interface ClientPortalProps {
   onOpenNewTicketModal: () => void;
   onAddComment: (ticketId: string, text: string) => void;
   onRateTicket: (ticketId: string, rating: number, feedback: string) => void;
+  onOpenRouterQrScanner?: () => void;
+  onOpenRouterQrSticker?: (cid?: string) => void;
 }
 
 export const ClientPortal: React.FC<ClientPortalProps> = ({
@@ -46,9 +50,10 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
   onOpenNewTicketModal,
   onAddComment,
   onRateTicket,
+  onOpenRouterQrScanner,
+  onOpenRouterQrSticker,
 }) => {
-  const [cidInput, setCidInput] = useState('');
-  const [whatsappInput, setWhatsappInput] = useState('');
+  const [clientIdentifier, setClientIdentifier] = useState('');
   const [loginError, setLoginError] = useState('');
 
   // Comment input per ticket
@@ -60,47 +65,43 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const normalizedCid = cidInput.trim().toUpperCase();
-    const cleanPhoneInput = whatsappInput.trim().replace(/[^0-9]/g, '');
+    const cleanInput = clientIdentifier.trim();
 
-    if (!normalizedCid) {
-      setLoginError(lang === 'bn' ? 'CID নম্বরটি লিখুন' : 'Please enter your CID Number');
-      return;
-    }
-
-    const foundByCid = clients.find(c => c.cid.toUpperCase() === normalizedCid);
-
-    if (!foundByCid) {
+    if (!cleanInput) {
       setLoginError(
         lang === 'bn' 
-          ? 'সঠিক CID নম্বর দিন (যেমন: CID-1001, CID-1002)' 
-          : 'Invalid CID Number. Try CID-1001'
+          ? 'অনুগ্রহ করে আপনার CID নম্বর অথবা হোয়াটসঅ্যাপ/ফোন নম্বর লিখুন' 
+          : 'Please enter your CID Number or WhatsApp / Phone number'
       );
       return;
     }
 
-    // Verify WhatsApp / Mobile number if supplied, or enforce match
-    if (cleanPhoneInput) {
-      const clientCleanPhone = foundByCid.phone.replace(/[^0-9]/g, '');
-      if (!clientCleanPhone.includes(cleanPhoneInput) && !cleanPhoneInput.includes(clientCleanPhone)) {
-        setLoginError(
-          lang === 'bn' 
-            ? `সিআইডি (${foundByCid.cid}) এর সাথে হোয়াটসঅ্যাপ নম্বর মেলেনি!` 
-            : `WhatsApp number does not match for CID ${foundByCid.cid}`
-        );
-        return;
-      }
-    } else {
+    const cleanUpper = cleanInput.toUpperCase();
+    const cleanDigits = cleanInput.replace(/[^0-9]/g, '');
+
+    // Search by CID (e.g. "CID-1001", "1001") or by Phone/WhatsApp number
+    const foundClient = clients.find(c => {
+      const cidUpper = c.cid.toUpperCase();
+      const matchCid = cidUpper === cleanUpper || 
+                       (cleanDigits.length >= 3 && cidUpper.replace(/[^0-9]/g, '') === cleanDigits);
+      
+      const cPhoneDigits = c.phone.replace(/[^0-9]/g, '');
+      const matchPhone = cleanDigits.length >= 6 && (cPhoneDigits.includes(cleanDigits) || cleanDigits.includes(cPhoneDigits));
+
+      return matchCid || matchPhone;
+    });
+
+    if (!foundClient) {
       setLoginError(
         lang === 'bn' 
-          ? 'অনুগ্রহ করে আপনার রেজিস্টার্ড নম্বর দিন' 
-          : 'Please enter your registered number'
+          ? 'গ্রাহক তথ্য পাওয়া যায়নি! আপনার সঠিক CID অথবা রেজিস্টার্ড হোয়াটসঅ্যাপ নম্বর দিন।' 
+          : 'Account not found! Please check your CID or registered phone number.'
       );
       return;
     }
 
     setLoginError('');
-    onLogin(foundByCid.cid);
+    onLogin(foundClient.cid);
   };
 
   // If not logged in, show CID Login Portal Card
@@ -121,52 +122,41 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
               Client<br />Portal
             </h2>
             <p className="text-xs text-zinc-400 mt-2 font-mono">
-              {lang === 'bn' ? 'আপনার ইউনিক CID নম্বর ও ফোন নম্বর দিয়ে প্রসেস করুন' : 'Customer Authentication & Support Tracking'}
+              {lang === 'bn' ? 'আপনার ইউনিক CID নম্বর অথবা রেজিস্টার্ড মোবাইল দিয়ে লগইন করুন' : 'Customer Authentication & Support Tracking'}
             </p>
           </div>
 
           {/* Login Form */}
           <form onSubmit={handleLoginSubmit} className="space-y-5">
-            {/* CID Input */}
+            {/* CID or WhatsApp/Phone Input */}
             <div>
-              <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-widest mb-1.5">
-                {lang === 'bn' ? 'গ্রাহক আইডি (CID Number)' : 'Customer Identifier (CID)'}
-              </label>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-widest">
+                  {lang === 'bn' ? 'গ্রাহক CID অথবা মোবাইল নম্বর' : 'Customer CID or Phone Number'}
+                </label>
+                <span className="text-[10px] font-bold text-emerald-400 uppercase">
+                  {lang === 'bn' ? '[যেকোনো ১টি]' : '[EITHER ONE]'}
+                </span>
+              </div>
               <div className="relative">
                 <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
                 <input
                   type="text"
                   required
-                  value={cidInput}
+                  value={clientIdentifier}
                   onChange={(e) => {
-                    setCidInput(e.target.value);
+                    setClientIdentifier(e.target.value);
                     setLoginError('');
                   }}
-                  placeholder="e.g. CID-1001"
-                  className="w-full pl-10 pr-4 py-3 bg-[#18181b] border border-[#27272a] focus:border-[#10b981] focus:ring-1 focus:ring-[#10b981] text-white font-mono font-bold uppercase tracking-wider text-sm outline-none transition-all"
+                  placeholder={lang === 'bn' ? 'যেমন: CID-1001 অথবা 01711XXXXXX' : 'e.g. CID-1001 or 01711XXXXXX'}
+                  className="w-full pl-10 pr-4 py-3 bg-[#18181b] border border-[#27272a] focus:border-[#10b981] focus:ring-1 focus:ring-[#10b981] text-white font-mono font-bold uppercase tracking-wider text-sm outline-none transition-all placeholder:text-zinc-600"
                 />
               </div>
-            </div>
-
-            {/* WhatsApp Number Input */}
-            <div>
-              <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-widest mb-1.5">
-                {lang === 'bn' ? 'হোয়াটসঅ্যাপ / মোবাইল নম্বর (Phone / WA)' : 'Registered Phone / WA'}
-              </label>
-              <div className="relative">
-                <PhoneCall className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#10b981]" />
-                <input
-                  type="tel"
-                  required
-                  value={whatsappInput}
-                  onChange={(e) => {
-                    setWhatsappInput(e.target.value);
-                    setLoginError('');
-                  }}
-                  placeholder="e.g. 01712345678"
-                  className="w-full pl-10 pr-4 py-3 bg-[#18181b] border border-[#27272a] focus:border-[#10b981] focus:ring-1 focus:ring-[#10b981] text-white font-mono font-bold tracking-wider text-sm outline-none transition-all"
-                />
-              </div>
+              <p className="text-[11px] text-zinc-500 mt-2">
+                {lang === 'bn'
+                  ? '💡 আপনার ইউনিক CID নম্বর অথবা রেজিস্টার্ড হোয়াটসঅ্যাপ নম্বর দিয়ে সরাসরি লগইন করুন।'
+                  : '💡 Enter your CID number or registered WhatsApp/Phone number to sign in.'}
+              </p>
             </div>
 
             {loginError && (
@@ -176,44 +166,27 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
               </p>
             )}
 
-            <button
-              type="submit"
-              className="w-full py-3.5 bg-[#10b981] hover:bg-[#059669] text-[#09090b] font-syne font-extrabold text-base tracking-wider uppercase transition-all shadow-lg flex items-center justify-center gap-2 active:scale-98"
-            >
-              <span>{lang === 'bn' ? 'লগইন প্রসেস করুন →' : 'Authenticate →'}</span>
-            </button>
-          </form>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              <button
+                type="submit"
+                className="w-full py-3.5 bg-[#10b981] hover:bg-[#059669] text-[#09090b] font-syne font-extrabold text-sm tracking-wider uppercase transition-all shadow-lg flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
+              >
+                <span>{lang === 'bn' ? 'লগইন প্রসেস করুন →' : 'Authenticate →'}</span>
+              </button>
 
-          {/* Quick Demo Test Accounts */}
-          <div className="mt-8 pt-6 border-t border-[#27272a]">
-            <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">
-              {lang === 'bn' ? 'টেস্ট গ্রাহক তথ্য (TEST VECTOR RECORDS):' : 'Test Vector Records (Quick Fill)'}
-            </div>
-            <div className="space-y-1.5">
-              {clients.map((c) => (
+              {onOpenRouterQrScanner && (
                 <button
-                  key={c.cid}
                   type="button"
-                  onClick={() => {
-                    setCidInput(c.cid);
-                    setWhatsappInput(c.phone.replace(/[^0-9]/g, ''));
-                    setLoginError('');
-                  }}
-                  className="w-full grid grid-cols-12 items-center p-2.5 bg-[#18181b] hover:bg-[#10b981]/10 border border-[#27272a] hover:border-[#10b981] text-left transition-all text-xs font-mono group"
+                  onClick={onOpenRouterQrScanner}
+                  className="w-full py-3.5 bg-indigo-950/80 hover:bg-indigo-900/90 text-indigo-300 border border-indigo-700/60 font-syne font-bold text-xs tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
+                  title="Point phone camera at router sticker"
                 >
-                  <span className="col-span-3 font-bold text-[#10b981] group-hover:text-emerald-400">
-                    {c.cid}
-                  </span>
-                  <span className="col-span-5 text-zinc-300 truncate font-semibold">
-                    {c.name}
-                  </span>
-                  <span className="col-span-4 text-right text-zinc-500 text-[11px] font-mono">
-                    {c.phone}
-                  </span>
+                  <Camera className="w-4 h-4 text-indigo-400" />
+                  <span>{lang === 'bn' ? '📷 রাউটার QR স্ক্যান' : '📷 Scan Router QR'}</span>
                 </button>
-              ))}
+              )}
             </div>
-          </div>
+          </form>
         </div>
       </div>
     );
@@ -272,10 +245,21 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          {onOpenRouterQrSticker && (
+            <button
+              onClick={() => onOpenRouterQrSticker(clientInfo.cid)}
+              className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 font-bold rounded-xl text-xs transition-all border border-emerald-500/30 flex items-center gap-2 active:scale-95 cursor-pointer shadow-md"
+              title="View & Print My Router QR Support Sticker"
+            >
+              <QrCode className="w-4 h-4 text-emerald-400" />
+              <span className="hidden sm:inline">{lang === 'bn' ? 'রাউটার QR স্টিকার' : 'Router QR Tag'}</span>
+            </button>
+          )}
+
           <button
             onClick={onOpenNewTicketModal}
-            className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs md:text-sm transition-all shadow-lg flex items-center gap-2 active:scale-95 group"
+            className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs md:text-sm transition-all shadow-lg flex items-center gap-2 active:scale-95 group cursor-pointer"
             title={lang === 'bn' ? 'নতুন টিকেট খুলুন (ভয়েস ডিকটেশন সহ)' : 'Open Support Ticket (Voice Enabled)'}
           >
             <PlusCircle className="w-4 h-4" />
@@ -288,7 +272,7 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({
 
           <button
             onClick={onLogout}
-            className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors"
+            className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors cursor-pointer"
             title="Exit Client Session"
           >
             <LogOut className="w-4 h-4" />

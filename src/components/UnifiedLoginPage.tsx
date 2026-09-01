@@ -15,7 +15,9 @@ import {
   Radio,
   Terminal,
   Activity,
-  Zap
+  Zap,
+  QrCode,
+  Camera
 } from 'lucide-react';
 
 interface UnifiedLoginPageProps {
@@ -24,6 +26,7 @@ interface UnifiedLoginPageProps {
   onStaffLogin: (user: { role: 'MANAGER' | 'NOC'; username: string; name: string }) => void;
   lang: 'bn' | 'en';
   onToggleLang: () => void;
+  onOpenRouterQrScanner?: () => void;
 }
 
 const STAFF_DEMO_ACCOUNTS = [
@@ -57,13 +60,13 @@ export const UnifiedLoginPage: React.FC<UnifiedLoginPageProps> = ({
   onStaffLogin,
   lang,
   onToggleLang,
+  onOpenRouterQrScanner,
 }) => {
   // Mode: 'CLIENT' | 'STAFF'
   const [loginPortalType, setLoginPortalType] = useState<'CLIENT' | 'STAFF'>('CLIENT');
   
-  // Client Form State
-  const [cidInput, setCidInput] = useState('');
-  const [phoneInput, setPhoneInput] = useState('');
+  // Client Form State (CID or WhatsApp/Phone)
+  const [clientIdentifier, setClientIdentifier] = useState('');
   const [clientError, setClientError] = useState<string | null>(null);
 
   // Staff Form State
@@ -76,42 +79,43 @@ export const UnifiedLoginPage: React.FC<UnifiedLoginPageProps> = ({
   const [staffError, setStaffError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Client Login Submit
+  // Client Login Submit (Either CID or WhatsApp/Phone)
   const handleClientSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setClientError(null);
 
-    const cleanCid = cidInput.trim().toUpperCase();
-    const cleanPhone = phoneInput.trim().replace(/[^0-9]/g, '');
+    const cleanInput = clientIdentifier.trim();
 
-    if (!cleanCid) {
-      setClientError(lang === 'bn' ? 'CID নম্বর লিখুন (যেমন: CID-1001)' : 'Please enter CID Number (e.g. CID-1001)');
-      return;
-    }
-
-    const foundClient = clients.find(c => c.cid.toUpperCase() === cleanCid);
-
-    if (!foundClient) {
+    if (!cleanInput) {
       setClientError(
         lang === 'bn' 
-          ? 'সঠিক CID নম্বর দিন! নিচে ডেমো কাস্টমারে ক্লিক করতে পারেন।' 
-          : 'Invalid CID. You can click a demo customer below.'
+          ? 'অনুগ্রহ করে আপনার CID নম্বর অথবা হোয়াটসঅ্যাপ/মোবাইল নম্বর লিখুন' 
+          : 'Please enter your CID Number or WhatsApp / Phone number'
       );
       return;
     }
 
-    if (cleanPhone) {
-      const clientCleanPhone = foundClient.phone.replace(/[^0-9]/g, '');
-      if (!clientCleanPhone.includes(cleanPhone) && !cleanPhone.includes(clientCleanPhone)) {
-        setClientError(
-          lang === 'bn' 
-            ? `সিআইডি (${foundClient.cid}) এর সাথে রেজিস্টার্ড ফোন মেলেনি!` 
-            : `Phone does not match registered number for ${foundClient.cid}`
-        );
-        return;
-      }
-    } else {
-      setClientError(lang === 'bn' ? 'রেজিস্টার্ড ফোন নম্বর লিখুন' : 'Enter registered phone number');
+    const cleanUpper = cleanInput.toUpperCase();
+    const cleanDigits = cleanInput.replace(/[^0-9]/g, '');
+
+    // Search by CID (e.g. "CID-1001", "1001") or by Phone/WhatsApp number
+    const foundClient = clients.find(c => {
+      const cidUpper = c.cid.toUpperCase();
+      const matchCid = cidUpper === cleanUpper || 
+                       (cleanDigits.length >= 3 && cidUpper.replace(/[^0-9]/g, '') === cleanDigits);
+      
+      const cPhoneDigits = c.phone.replace(/[^0-9]/g, '');
+      const matchPhone = cleanDigits.length >= 6 && (cPhoneDigits.includes(cleanDigits) || cleanDigits.includes(cPhoneDigits));
+
+      return matchCid || matchPhone;
+    });
+
+    if (!foundClient) {
+      setClientError(
+        lang === 'bn' 
+          ? 'গ্রাহক তথ্য পাওয়া যায়নি! আপনার সঠিক CID নম্বর অথবা রেজিস্টার্ড ফোন নম্বর দিন।' 
+          : 'Account not found! Please check your CID or registered phone number.'
+      );
       return;
     }
 
@@ -309,37 +313,30 @@ export const UnifiedLoginPage: React.FC<UnifiedLoginPageProps> = ({
             >
               <form onSubmit={handleClientSubmit} className="space-y-5">
                 <div className="input-group">
-                  <label className="block font-mono text-[10px] uppercase tracking-[0.2em] text-[#6366f1] mb-2 font-medium">
-                    {lang === 'bn' ? 'IDENTIFIER_STRING (গ্রাহক CID)' : 'IDENTIFIER_STRING (CID)'}
-                  </label>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#6366f1] font-medium">
+                      {lang === 'bn' ? 'গ্রাহক CID অথবা মোবাইল নম্বর' : 'CLIENT CID OR PHONE NUMBER'}
+                    </label>
+                    <span className="font-mono text-[9px] text-[#f0f0f5]/40 tracking-wider">
+                      {lang === 'bn' ? '[যেকোনো ১টি]' : '[EITHER ONE]'}
+                    </span>
+                  </div>
                   <input
                     type="text"
                     required
-                    value={cidInput}
+                    value={clientIdentifier}
                     onChange={(e) => {
-                      setCidInput(e.target.value);
+                      setClientIdentifier(e.target.value);
                       setClientError(null);
                     }}
-                    placeholder="CID-1001"
-                    className="w-full bg-transparent border-b border-[rgba(240,240,245,0.15)] focus:border-b-[#6366f1] py-2.5 text-[#f0f0f5] font-mono text-base outline-none tracking-wider transition-colors placeholder:text-[#f0f0f5]/20 uppercase"
+                    placeholder={lang === 'bn' ? 'যেমন: CID-1001 বা 01711XXXXXX' : 'e.g. CID-1001 or 01711XXXXXX'}
+                    className="w-full bg-transparent border-b border-[rgba(240,240,245,0.15)] focus:border-b-[#6366f1] py-2.5 text-[#f0f0f5] font-mono text-base outline-none tracking-wider transition-colors placeholder:text-[#f0f0f5]/30 uppercase"
                   />
-                </div>
-
-                <div className="input-group">
-                  <label className="block font-mono text-[10px] uppercase tracking-[0.2em] text-[#6366f1] mb-2 font-medium">
-                    {lang === 'bn' ? 'COMMS_LINK (রেজিস্টার্ড মোবাইল)' : 'COMMS_LINK (PHONE NUMBER)'}
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={phoneInput}
-                    onChange={(e) => {
-                      setPhoneInput(e.target.value);
-                      setClientError(null);
-                    }}
-                    placeholder="01711-XXXXXX"
-                    className="w-full bg-transparent border-b border-[rgba(240,240,245,0.15)] focus:border-b-[#6366f1] py-2.5 text-[#f0f0f5] font-mono text-base outline-none tracking-wider transition-colors placeholder:text-[#f0f0f5]/20"
-                  />
+                  <p className="text-[11px] font-mono text-[#f0f0f5]/40 mt-2">
+                    {lang === 'bn' 
+                      ? '💡 আপনার গ্রাহক আইডি (CID) অথবা রেজিস্টার্ড হোয়াটসঅ্যাপ/মোবাইল নম্বর লিখুন' 
+                      : '💡 Enter your unique CID number or registered WhatsApp/Mobile phone'}
+                  </p>
                 </div>
 
                 {clientError && (
@@ -349,7 +346,7 @@ export const UnifiedLoginPage: React.FC<UnifiedLoginPageProps> = ({
                   </div>
                 )}
 
-                <div className="pt-2 flex flex-col gap-3">
+                <div className="pt-2 flex flex-col gap-2.5">
                   <button
                     type="submit"
                     disabled={isLoading}
@@ -358,47 +355,29 @@ export const UnifiedLoginPage: React.FC<UnifiedLoginPageProps> = ({
                     {isLoading ? (lang === 'bn' ? 'যাচাই হচ্ছে...' : 'AUTHENTICATING...') : (lang === 'bn' ? 'ACCESS GATEWAY' : 'ACCESS GATEWAY')}
                   </button>
 
+                  {onOpenRouterQrScanner && (
+                    <button
+                      type="button"
+                      onClick={onOpenRouterQrScanner}
+                      className="celestial-btn w-full py-3 px-4 bg-emerald-950/40 text-emerald-300 border border-emerald-500/40 font-bold text-xs hover:bg-emerald-500 hover:text-slate-950 hover:border-emerald-500 cursor-pointer flex items-center justify-center gap-2 transition-all"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>{lang === 'bn' ? '📷 রাউটার কিউআর স্ক্যান করুন' : '📷 SCAN PHYSICAL ROUTER QR'}</span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => {
                       setLoginPortalType('STAFF');
                       setStaffError(null);
                     }}
-                    className="celestial-btn w-full py-3 px-4 bg-transparent text-[#f0f0f5]/70 border border-[rgba(240,240,245,0.15)] font-bold text-xs hover:bg-[#f0f0f5] hover:text-[#0a0a0c] hover:border-[#f0f0f5] cursor-pointer"
+                    className="celestial-btn w-full py-2.5 px-4 bg-transparent text-[#f0f0f5]/70 border border-[rgba(240,240,245,0.15)] font-bold text-xs hover:bg-[#f0f0f5] hover:text-[#0a0a0c] hover:border-[#f0f0f5] cursor-pointer"
                   >
                     {lang === 'bn' ? 'স্টাফ লগইন ইন্টারফেস' : 'STAFF LOGIN INTERFACE'}
                   </button>
                 </div>
               </form>
-
-              {/* Instant 1-Click Demo Client Accounts */}
-              <div className="pt-4 border-t border-[rgba(240,240,245,0.08)]">
-                <span className="font-mono text-[10px] uppercase tracking-wider text-[#f0f0f5]/40 block mb-2 font-medium">
-                  {lang === 'bn' ? '// দ্রুত ১-ক্লিক ডেমো গ্রাহক:' : '// 1-CLICK INSTANT DEMO PROFILES:'}
-                </span>
-                <div className="grid grid-cols-2 gap-2">
-                  {clients.slice(0, 4).map((c) => (
-                    <button
-                      key={c.cid}
-                      type="button"
-                      onClick={() => {
-                        setCidInput(c.cid);
-                        setPhoneInput(c.phone);
-                        onClientLogin(c.cid);
-                      }}
-                      className="p-2 bg-white/[0.02] hover:bg-white/[0.06] border border-[rgba(240,240,245,0.08)] hover:border-[#6366f1]/50 text-left transition-all group cursor-pointer"
-                    >
-                      <div className="flex justify-between items-center font-mono text-[10px]">
-                        <span className="text-[#6366f1] font-bold">{c.cid}</span>
-                        <span className="text-[#f0f0f5]/40">{c.area.split(' ')[0]}</span>
-                      </div>
-                      <span className="text-xs text-[#f0f0f5]/80 font-medium block truncate mt-0.5 group-hover:text-white">
-                        {c.name}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
             </motion.div>
           )}
 
@@ -596,7 +575,7 @@ export const UnifiedLoginPage: React.FC<UnifiedLoginPageProps> = ({
           <span>NETWORK STATUS: NOMINAL // ALL SYSTEMS GO</span>
         </div>
         <div className="text-left sm:text-center text-[#f0f0f5]/60 font-medium">
-          HELPLINE: 01711-XXXXXX (24/7 NOC)
+          HELPLINE: 01719394430 (24/7 NOC)
         </div>
         <div className="text-left sm:text-right">
           © 2026 DELTA MITHAPUKUR NOC

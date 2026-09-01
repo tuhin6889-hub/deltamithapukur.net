@@ -18,7 +18,9 @@ import {
   Cpu,
   Mail,
   UserPlus,
-  Home
+  Home,
+  QrCode,
+  Printer
 } from 'lucide-react';
 import { ClientInfo } from '../types';
 
@@ -28,6 +30,8 @@ interface ClientDatabaseModalProps {
   clients: ClientInfo[];
   lang: 'bn' | 'en';
   onOpenAddNewClient?: () => void;
+  onOpenRouterQrStickerForClient?: (cid: string) => void;
+  onOpenBatchRouterQrStickers?: () => void;
 }
 
 export const ClientDatabaseModal: React.FC<ClientDatabaseModalProps> = ({
@@ -36,6 +40,8 @@ export const ClientDatabaseModal: React.FC<ClientDatabaseModalProps> = ({
   clients,
   lang,
   onOpenAddNewClient,
+  onOpenRouterQrStickerForClient,
+  onOpenBatchRouterQrStickers,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedArea, setSelectedArea] = useState('ALL');
@@ -215,12 +221,23 @@ export const ClientDatabaseModal: React.FC<ClientDatabaseModalProps> = ({
             <button
               onClick={handleDownloadCSV}
               disabled={filteredClients.length === 0}
-              className="px-3.5 py-2 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl border border-sky-400/30 flex items-center gap-1.5 transition-all shadow-md active:scale-95 whitespace-nowrap"
+              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all shadow-sm active:scale-95 whitespace-nowrap"
               title="Download current client list as CSV"
             >
-              <Download className="w-4 h-4 text-white" />
-              <span>{lang === 'bn' ? 'CSV ডাউনলোড' : 'Download CSV'}</span>
+              <Download className="w-3.5 h-3.5 text-slate-300" />
+              <span>{lang === 'bn' ? 'CSV' : 'CSV'}</span>
             </button>
+
+            {onOpenBatchRouterQrStickers && (
+              <button
+                onClick={onOpenBatchRouterQrStickers}
+                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs rounded-xl border border-emerald-400/40 flex items-center gap-1.5 transition-all shadow-md active:scale-95 whitespace-nowrap cursor-pointer"
+                title="Generate & Print Physical Router Support QR Stickers for Clients"
+              >
+                <QrCode className="w-4 h-4 text-slate-950" />
+                <span>{lang === 'bn' ? 'সব রাউটার স্টিকার' : 'All Router Stickers'}</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -235,13 +252,14 @@ export const ClientDatabaseModal: React.FC<ClientDatabaseModalProps> = ({
                   <th className="p-3">Package / Speed</th>
                   <th className="p-3">IP & ONU Optical Power</th>
                   <th className="p-3">Balance Status</th>
-                  <th className="p-3 text-right">Status</th>
+                  <th className="p-3">Status</th>
+                  <th className="p-3 text-right">Router Tag</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 font-mono">
                 {filteredClients.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-8 text-center text-slate-500">
+                    <td colSpan={7} className="p-8 text-center text-slate-500">
                       No client matching query "{searchQuery}"
                     </td>
                   </tr>
@@ -279,7 +297,7 @@ export const ClientDatabaseModal: React.FC<ClientDatabaseModalProps> = ({
                           {client.balance <= 0 ? 'Paid (৳ 0)' : `Due: ৳ ${client.balance}`}
                         </span>
                       </td>
-                      <td className="p-3 text-right">
+                      <td className="p-3">
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-flex items-center gap-1 ${
                           client.status === 'Active'
                             ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
@@ -288,6 +306,18 @@ export const ClientDatabaseModal: React.FC<ClientDatabaseModalProps> = ({
                           {client.status === 'Active' ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
                           <span>{client.status}</span>
                         </span>
+                      </td>
+                      <td className="p-3 text-right">
+                        {onOpenRouterQrStickerForClient && (
+                          <button
+                            onClick={() => onOpenRouterQrStickerForClient(client.cid)}
+                            className="px-2.5 py-1 bg-slate-900 hover:bg-emerald-950 text-emerald-400 hover:text-emerald-300 border border-slate-700 hover:border-emerald-500/60 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 transition-all shadow-sm active:scale-95 cursor-pointer"
+                            title={`Generate & Print Router QR Sticker for ${client.name} (${client.cid})`}
+                          >
+                            <QrCode className="w-3.5 h-3.5" />
+                            <span>{lang === 'bn' ? 'স্টিকার QR' : 'QR Tag'}</span>
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))

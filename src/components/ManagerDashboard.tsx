@@ -8,6 +8,7 @@ import { TicketStatusBadge } from './TicketStatusBadge';
 import { TicketPriorityBadge, getPriorityColorConfig } from './TicketPriorityBadge';
 import { NetworkServerManager } from './NetworkServerManager';
 import { MonthSummaryAnalytics } from './MonthSummaryAnalytics';
+import { WeeklyResolutionChart } from './WeeklyResolutionChart';
 import { NocStaffPerformanceDashboard } from './NocStaffPerformanceDashboard';
 import { 
   CheckCircle2, 
@@ -81,6 +82,7 @@ interface ManagerDashboardProps {
   onSendManualNotification: (ticketId: string, cid: string, message: string, channel: 'WhatsApp' | 'Email' | 'SMS') => void;
   onOpenNewTicketModal: () => void;
   onOpenAddNewClient?: () => void;
+  onOpenMotherWebsiteHub?: () => void;
   onAddServer?: (server: NetworkServer) => void;
   onUpdateServer?: (server: NetworkServer) => void;
   onDeleteServer?: (serverId: string) => void;
@@ -102,6 +104,7 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
   onSendManualNotification,
   onOpenNewTicketModal,
   onOpenAddNewClient,
+  onOpenMotherWebsiteHub,
   onAddServer,
   onUpdateServer,
   onDeleteServer,
@@ -549,6 +552,17 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
               </div>
             )}
 
+            {onOpenMotherWebsiteHub && (
+              <button
+                onClick={onOpenMotherWebsiteHub}
+                className="px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold rounded-xl text-xs md:text-sm transition-all shadow-lg flex items-center gap-2 active:scale-95 border border-indigo-400/40"
+                title="Mother Website (https://delta-mithapukur.vercel.app/) Client DB & Marketing Portal Bridge"
+              >
+                <Globe className="w-4 h-4 text-indigo-200 animate-pulse" />
+                <span>{lang === 'bn' ? 'মাদার ওয়েবসাইট ও মার্কেটিং' : 'Mother Site & Ads'}</span>
+              </button>
+            )}
+
             {onOpenAddNewClient && (
               <button
                 onClick={onOpenAddNewClient}
@@ -570,42 +584,42 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
         </div>
 
         {/* Analytics Counter Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 mt-6 pt-5 border-t border-slate-700/60">
-          <div className="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700/50">
-            <p className="text-slate-400 text-xs font-medium">{lang === 'bn' ? 'মোট টিকেট' : 'Total Tickets'}</p>
-            <p className="text-2xl font-bold text-white mt-1">{totalTickets}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2.5 mt-4 pt-3.5 border-t border-slate-700/60">
+          <div className="bg-slate-800/80 px-3 py-2 rounded-xl border border-slate-700/50">
+            <p className="text-slate-400 text-[11px] font-medium">{lang === 'bn' ? 'মোট টিকেট' : 'Total Tickets'}</p>
+            <p className="text-lg font-bold text-white mt-0.5">{totalTickets}</p>
           </div>
 
-          <div className="bg-slate-800/80 p-3.5 rounded-xl border border-amber-500/30">
-            <p className="text-amber-400 text-xs font-medium flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5" />
+          <div className="bg-slate-800/80 px-3 py-2 rounded-xl border border-amber-500/30">
+            <p className="text-amber-400 text-[11px] font-medium flex items-center gap-1">
+              <Clock className="w-3 h-3" />
               <span>{lang === 'bn' ? 'পেন্ডিং / ওপেন' : 'Open Pending'}</span>
             </p>
-            <p className="text-2xl font-bold text-amber-300 mt-1">{openCount}</p>
+            <p className="text-lg font-bold text-amber-300 mt-0.5">{openCount}</p>
           </div>
 
-          <div className="bg-slate-800/80 p-3.5 rounded-xl border border-blue-500/30">
-            <p className="text-blue-400 text-xs font-medium flex items-center gap-1">
-              <Activity className="w-3.5 h-3.5" />
+          <div className="bg-slate-800/80 px-3 py-2 rounded-xl border border-blue-500/30">
+            <p className="text-blue-400 text-[11px] font-medium flex items-center gap-1">
+              <Activity className="w-3 h-3" />
               <span>{lang === 'bn' ? 'নোক টিমে রানিং' : 'In Progress'}</span>
             </p>
-            <p className="text-2xl font-bold text-blue-300 mt-1">{inProgressCount}</p>
+            <p className="text-lg font-bold text-blue-300 mt-0.5">{inProgressCount}</p>
           </div>
 
-          <div className="bg-slate-800/80 p-3.5 rounded-xl border border-emerald-500/30">
-            <p className="text-emerald-400 text-xs font-medium flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5" />
+          <div className="bg-slate-800/80 px-3 py-2 rounded-xl border border-emerald-500/30">
+            <p className="text-emerald-400 text-[11px] font-medium flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" />
               <span>{lang === 'bn' ? 'সমাধানকৃত টিকেট' : 'Resolved'}</span>
             </p>
-            <p className="text-2xl font-bold text-emerald-300 mt-1">{resolvedCount}</p>
+            <p className="text-lg font-bold text-emerald-300 mt-0.5">{resolvedCount}</p>
           </div>
 
-          <div className="col-span-2 sm:col-span-1 bg-slate-800/80 p-3.5 rounded-xl border border-rose-500/30">
-            <p className="text-rose-400 text-xs font-medium flex items-center gap-1">
-              <ShieldAlert className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
-              <span>{lang === 'bn' ? 'জরুরি ফাইবার লাইন কাট' : 'Emergency Line Cuts'}</span>
+          <div className="col-span-2 sm:col-span-1 bg-slate-800/80 px-3 py-2 rounded-xl border border-rose-500/30">
+            <p className="text-rose-400 text-[11px] font-medium flex items-center gap-1">
+              <ShieldAlert className="w-3 h-3 text-rose-400 animate-pulse" />
+              <span>{lang === 'bn' ? 'জরুরি ফাইবার লাইন কাট' : 'Emergency Cuts'}</span>
             </p>
-            <p className="text-2xl font-bold text-rose-300 mt-1">{emergencyLineCutsCount}</p>
+            <p className="text-lg font-bold text-rose-300 mt-0.5">{emergencyLineCutsCount}</p>
           </div>
         </div>
       </div>
@@ -930,6 +944,13 @@ export const ManagerDashboard: React.FC<ManagerDashboardProps> = ({
               setSelectedCategory(category);
               setActiveTab('TICKETS');
             }}
+          />
+
+          {/* Recharts Weekly Resolution Times by Day (Last 7 Days) */}
+          <WeeklyResolutionChart
+            tickets={tickets}
+            lang={lang}
+            onSelectTicket={onSelectTicket}
           />
 
           {/* Recharts Grid Section */}

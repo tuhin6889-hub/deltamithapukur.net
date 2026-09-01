@@ -29,7 +29,9 @@ import {
   AlertCircle,
   Hash,
   PhoneCall,
-  Flame
+  Flame,
+  QrCode,
+  Camera
 } from 'lucide-react';
 
 interface StaffUser {
@@ -56,9 +58,12 @@ interface NavbarProps {
   onOpenEmailCenter?: () => void;
   onOpenWhatsAppCenter?: () => void;
   onOpenClientDatabase?: () => void;
+  onOpenMotherWebsiteHub?: () => void;
   onOpenAddNewClient?: () => void;
   onGoHome?: () => void;
   onOpenAndroidInstall?: () => void;
+  onOpenRouterQrSticker?: () => void;
+  onOpenRouterQrScanner?: () => void;
   onSelectTicket?: (ticket: Ticket) => void;
   // Offline Cache & Sync Props
   isOnline?: boolean;
@@ -89,9 +94,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenEmailCenter,
   onOpenWhatsAppCenter,
   onOpenClientDatabase,
+  onOpenMotherWebsiteHub,
   onOpenAddNewClient,
   onGoHome,
   onOpenAndroidInstall,
+  onOpenRouterQrSticker,
+  onOpenRouterQrScanner,
   onSelectTicket,
   isOnline = true,
   isSimulatedOffline = false,
@@ -609,6 +617,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </button>
                 )}
 
+                {/* Mother Website & Marketing Portal Button */}
+                {onOpenMotherWebsiteHub && (
+                  <button
+                    onClick={onOpenMotherWebsiteHub}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 rounded-xl border border-indigo-500/40 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer whitespace-nowrap hover:border-indigo-400"
+                    title="Mother Website (https://delta-mithapukur.vercel.app/) Client DB & Marketing Portal Bridge"
+                  >
+                    <Globe className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+                    <span>{lang === 'bn' ? 'মাদার ওয়েবসাইট ও মার্কেটিং' : 'Mother Site & Ads'}</span>
+                    <span className="px-1.5 py-0.2 rounded bg-indigo-500/30 text-indigo-200 text-[10px] font-mono border border-indigo-400/40">LIVE</span>
+                  </button>
+                )}
+
                 {/* WhatsApp Server API Center Button */}
                 {onOpenWhatsAppCenter && (
                   <button
@@ -632,6 +653,32 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <Mail className="w-3.5 h-3.5 text-amber-400" />
                     <span>{lang === 'bn' ? 'ইমেইল সেন্টার' : 'Email Center'}</span>
                     <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[10px] font-mono border border-amber-500/30">SMTP</span>
+                  </button>
+                )}
+
+                {/* Router Support QR Sticker Generator Button */}
+                {onOpenRouterQrSticker && (
+                  <button
+                    onClick={onOpenRouterQrSticker}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-emerald-300 rounded-xl border border-emerald-500/30 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer whitespace-nowrap hover:border-emerald-500/60"
+                    title="Generate & Print Physical Router Support QR Stickers"
+                  >
+                    <QrCode className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>{lang === 'bn' ? 'রাউটার কিউআর' : 'Router QR Tag'}</span>
+                    <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-mono border border-emerald-500/30">PRINT</span>
+                  </button>
+                )}
+
+                {/* Scan QR Code Button */}
+                {onOpenRouterQrScanner && (
+                  <button
+                    onClick={onOpenRouterQrScanner}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-indigo-300 rounded-xl border border-indigo-500/30 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer whitespace-nowrap hover:border-indigo-500/60"
+                    title="Scan Physical Router QR Code to Create Fast Support Ticket"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>{lang === 'bn' ? 'স্ক্যান কিউআর' : 'Scan QR'}</span>
+                    <span className="px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 text-[10px] font-mono border border-indigo-500/30">SCAN</span>
                   </button>
                 )}
 

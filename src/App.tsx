@@ -38,8 +38,12 @@ import { NotificationModal } from './components/NotificationModal';
 import { EmailCenterModal } from './components/EmailCenterModal';
 import { WhatsAppApiCenterModal } from './components/WhatsAppApiCenterModal';
 import { ClientDatabaseModal } from './components/ClientDatabaseModal';
+import { MotherWebsiteMarketingHubModal } from './components/MotherWebsiteMarketingHubModal';
 import { NewClientModal } from './components/NewClientModal';
 import { AndroidInstallModal } from './components/AndroidInstallModal';
+import { RouterQrStickerModal } from './components/RouterQrStickerModal';
+import { RouterQrScannerModal } from './components/RouterQrScannerModal';
+import { QuickRouterTicketModal } from './components/QuickRouterTicketModal';
 import { StaffToolbar } from './components/StaffToolbar';
 import { Footer } from './components/Footer';
 import { StatusFeedbackToast, StatusFeedbackData } from './components/StatusFeedbackToast';
@@ -224,8 +228,38 @@ export default function App() {
   const [isEmailCenterOpen, setIsEmailCenterOpen] = useState(false);
   const [isWhatsAppApiCenterOpen, setIsWhatsAppApiCenterOpen] = useState(false);
   const [isClientDbModalOpen, setIsClientDbModalOpen] = useState(false);
+  const [isMotherWebsiteModalOpen, setIsMotherWebsiteModalOpen] = useState(false);
   const [isAndroidInstallModalOpen, setIsAndroidInstallModalOpen] = useState(false);
   const [aiLoadingTicketId, setAiLoadingTicketId] = useState<string | null>(null);
+
+  // Router QR Code Sticker & Quick Support Ticket Modals
+  const [isRouterQrStickerModalOpen, setIsRouterQrStickerModalOpen] = useState(false);
+  const [routerStickerTargetCid, setRouterStickerTargetCid] = useState<string | null>(null);
+  const [isRouterQrScannerModalOpen, setIsRouterQrScannerModalOpen] = useState(false);
+  const [quickTicketClient, setQuickTicketClient] = useState<ClientInfo | null>(null);
+
+  // Detect Physical Router QR Code Scanner deep link from URL params (?action=quick-ticket&cid=CID-1001)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const action = urlParams.get('action');
+      const cidParam = urlParams.get('cid');
+      if (action === 'quick-ticket' && cidParam) {
+        const found = clients.find(c => c.cid.toUpperCase() === cidParam.toUpperCase());
+        if (found) {
+          setQuickTicketClient(found);
+          setStatusFeedback({
+            type: 'AUTO_AI',
+            title: lang === 'bn' ? 'রাউটার কিউআর কোড সনাক্ত' : 'Router QR Tag Identified',
+            message: `${found.name} (${found.cid}) - ${found.area}`,
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing QR URL params:', e);
+    }
+  }, [clients, lang]);
 
   // Add Client Handler
   const handleAddClient = (newClient: ClientInfo) => {
@@ -749,6 +783,7 @@ export default function App() {
           onSendManualNotification={handleSendManualNotification}
           onOpenNewTicketModal={() => setIsNewTicketModalOpen(true)}
           onOpenAddNewClient={() => setIsNewClientModalOpen(true)}
+          onOpenMotherWebsiteHub={() => setIsMotherWebsiteModalOpen(true)}
           onAddServer={handleAddServer}
           onUpdateServer={handleUpdateServer}
           onDeleteServer={handleDeleteServer}
@@ -797,6 +832,11 @@ export default function App() {
         onOpenNewTicketModal={() => setIsNewTicketModalOpen(true)}
         onAddComment={handleAddComment}
         onRateTicket={handleRateTicket}
+        onOpenRouterQrScanner={() => setIsRouterQrScannerModalOpen(true)}
+        onOpenRouterQrSticker={(cid) => {
+          setRouterStickerTargetCid(cid || null);
+          setIsRouterQrStickerModalOpen(true);
+        }}
       />
     );
   };
@@ -809,6 +849,9 @@ export default function App() {
     setIsEmailCenterOpen(false);
     setIsWhatsAppApiCenterOpen(false);
     setIsClientDbModalOpen(false);
+    setIsRouterQrStickerModalOpen(false);
+    setIsRouterQrScannerModalOpen(false);
+    setQuickTicketClient(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -827,6 +870,32 @@ export default function App() {
           }}
           lang={lang}
           onToggleLang={() => setLang(prev => prev === 'bn' ? 'en' : 'bn')}
+          onOpenRouterQrScanner={() => setIsRouterQrScannerModalOpen(true)}
+        />
+
+        {/* Global QR Scanner & Quick Ticket Modals available on Login Screen too */}
+        <RouterQrScannerModal
+          isOpen={isRouterQrScannerModalOpen}
+          onClose={() => setIsRouterQrScannerModalOpen(false)}
+          clients={clients}
+          lang={lang}
+          onScanSuccess={(cid) => {
+            const target = clients.find(c => c.cid.toUpperCase() === cid.toUpperCase());
+            if (target) {
+              setQuickTicketClient(target);
+            }
+          }}
+        />
+
+        <QuickRouterTicketModal
+          isOpen={quickTicketClient !== null}
+          onClose={() => setQuickTicketClient(null)}
+          client={quickTicketClient}
+          onSubmitTicket={(data) => {
+            handleCreateTicket(data);
+            setQuickTicketClient(null);
+          }}
+          lang={lang}
         />
       </div>
     );
@@ -854,8 +923,14 @@ export default function App() {
         onOpenEmailCenter={() => setIsEmailCenterOpen(true)}
         onOpenWhatsAppCenter={() => setIsWhatsAppApiCenterOpen(true)}
         onOpenClientDatabase={() => setIsClientDbModalOpen(true)}
+        onOpenMotherWebsiteHub={() => setIsMotherWebsiteModalOpen(true)}
         onOpenAddNewClient={() => setIsNewClientModalOpen(true)}
         onOpenAndroidInstall={() => setIsAndroidInstallModalOpen(true)}
+        onOpenRouterQrSticker={() => {
+          setRouterStickerTargetCid(loggedInCid || null);
+          setIsRouterQrStickerModalOpen(true);
+        }}
+        onOpenRouterQrScanner={() => setIsRouterQrScannerModalOpen(true)}
         onGoHome={handleGoHome}
         onSelectTicket={(ticket) => setSelectedTicket(ticket)}
         isOnline={isOnline}
@@ -1021,6 +1096,36 @@ export default function App() {
           setIsClientDbModalOpen(false);
           setIsNewClientModalOpen(true);
         }}
+        onOpenRouterQrStickerForClient={(cid) => {
+          setRouterStickerTargetCid(cid);
+          setIsRouterQrStickerModalOpen(true);
+        }}
+        onOpenBatchRouterQrStickers={() => {
+          setRouterStickerTargetCid(null);
+          setIsRouterQrStickerModalOpen(true);
+        }}
+      />
+
+      <MotherWebsiteMarketingHubModal
+        isOpen={isMotherWebsiteModalOpen}
+        onClose={() => setIsMotherWebsiteModalOpen(false)}
+        clients={clients}
+        lang={lang}
+        onOpenAddNewClient={() => {
+          setIsMotherWebsiteModalOpen(false);
+          setIsNewClientModalOpen(true);
+        }}
+        onConvertLeadToClient={(lead) => {
+          setIsMotherWebsiteModalOpen(false);
+          setIsNewClientModalOpen(true);
+        }}
+        onShowToast={(msg, type) => {
+          setStatusFeedback({
+            type: type === 'success' ? 'RESOLVED' : type === 'error' ? 'FAILED' : 'AUTO_AI',
+            title: lang === 'bn' ? 'মাদার ওয়েবসাইট সিঙ্ক' : 'Mother Site Sync',
+            message: msg,
+          });
+        }}
       />
 
       <NewClientModal
@@ -1034,6 +1139,51 @@ export default function App() {
       <AndroidInstallModal
         isOpen={isAndroidInstallModalOpen}
         onClose={() => setIsAndroidInstallModalOpen(false)}
+        lang={lang}
+      />
+
+      {/* Router QR Code Sticker Generator & Print Modal */}
+      <RouterQrStickerModal
+        isOpen={isRouterQrStickerModalOpen}
+        onClose={() => {
+          setIsRouterQrStickerModalOpen(false);
+          setRouterStickerTargetCid(null);
+        }}
+        clients={clients}
+        lang={lang}
+        defaultCid={routerStickerTargetCid || loggedInCid || undefined}
+        onSimulateScan={(cid) => {
+          setIsRouterQrStickerModalOpen(false);
+          const target = clients.find(c => c.cid.toUpperCase() === cid.toUpperCase());
+          if (target) {
+            setQuickTicketClient(target);
+          }
+        }}
+      />
+
+      {/* Router QR Camera Scanner Modal */}
+      <RouterQrScannerModal
+        isOpen={isRouterQrScannerModalOpen}
+        onClose={() => setIsRouterQrScannerModalOpen(false)}
+        clients={clients}
+        lang={lang}
+        onScanSuccess={(cid) => {
+          const target = clients.find(c => c.cid.toUpperCase() === cid.toUpperCase());
+          if (target) {
+            setQuickTicketClient(target);
+          }
+        }}
+      />
+
+      {/* 1-Click Quick Router Ticket Creation Modal */}
+      <QuickRouterTicketModal
+        isOpen={quickTicketClient !== null}
+        onClose={() => setQuickTicketClient(null)}
+        client={quickTicketClient}
+        onSubmitTicket={(data) => {
+          handleCreateTicket(data);
+          setQuickTicketClient(null);
+        }}
         lang={lang}
       />
 

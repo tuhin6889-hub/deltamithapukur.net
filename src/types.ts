@@ -143,3 +143,51 @@ export interface NetworkServer {
   addedDate: string;
 }
 
+export interface MotherSiteLead {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  area: string;
+  address: string;
+  requestedPackage: string;
+  monthlyBudget?: string;
+  source: 'Mother_Website' | 'Landing_Page' | 'Promo_Banner' | 'Facebook_Ad' | 'Referral';
+  status: 'New_Lead' | 'Contacted' | 'Survey_Scheduled' | 'Converted' | 'Rejected';
+  timestamp: string;
+  notes?: string;
+}
+
+export interface MarketingCampaign {
+  id: string;
+  campaignTitle: string;
+  campaignTitleBn: string;
+  packageName: string;
+  speedMbps: number;
+  bdixMbps: number;
+  monthlyFee: number;
+  promoDiscountPercent?: number;
+  bannerBadgeText: string;
+  featuresList: string[];
+  featuresListBn: string[];
+  ctaUrl: string;
+  isActiveOnMotherSite: boolean;
+  impressions: number;
+  clicks: number;
+  leadsGenerated: number;
+  lastSynced: string;
+}
+
+export interface MotherSiteSyncConfig {
+  motherSiteUrl: string;
+  apiSecretKey: string;
+  webhookEndpoint: string;
+  autoSyncEnabled: boolean;
+  syncIntervalMinutes: number;
+  lastSyncTimestamp: string;
+  syncStatus: 'SUCCESS' | 'SYNCING' | 'ERROR' | 'IDLE';
+  syncedSubscribersCount: number;
+  syncedCampaignsCount: number;
+  pendingLeadsCount: number;
+}
+
