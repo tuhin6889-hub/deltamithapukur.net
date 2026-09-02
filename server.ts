@@ -33,17 +33,55 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Simulated Notification API - WhatsApp
+// Simulated Notification API - WhatsApp with attempt tracking & failure simulation
 app.post("/api/notify/whatsapp", (req, res) => {
-  const { recipient, recipientType, title, message, ticketId, cid } = req.body;
-  console.log(`[WHATSAPP ALERT] Sent to ${recipientType} (${recipient}): Ticket #${ticketId} - CID ${cid}`);
+  const { recipient, recipientType, title, message, ticketId, cid, attempt = 1, simulateFailure = false } = req.body;
+  
+  if (simulateFailure) {
+    console.log(`[WHATSAPP ALERT ATTEMPT ${attempt}/3 FAILED] Recipient: ${recipientType} (${recipient}) - Ticket #${ticketId}`);
+    return res.status(502).json({
+      success: false,
+      channel: "WhatsApp",
+      attempt,
+      error: `Meta WhatsApp Cloud API delivery failed (Attempt ${attempt}/3): Handshake timeout / 502 Bad Gateway`,
+      recipient,
+      sentAt: new Date().toISOString(),
+    });
+  }
+
+  console.log(`[WHATSAPP ALERT ATTEMPT ${attempt}] Sent to ${recipientType} (${recipient}): Ticket #${ticketId} - CID ${cid}`);
   res.json({
     success: true,
     channel: "WhatsApp",
+    attempt,
     sentAt: new Date().toISOString(),
     recipient,
     recipientType,
     formattedPreview: `*Delta Mithapukur Alert*\n*Ticket #${ticketId}*\nCID: ${cid}\n*Subject:* ${title}\n*Details:* ${message}\n_Status updated by System_`,
+  });
+});
+
+// Dedicated Emergency & Standard SMS Notification API
+app.post("/api/notify/sms", (req, res) => {
+  const { recipient, recipientType, title, message, ticketId, cid, isEmergencyFallback = false, fallbackReason, attemptCount = 3 } = req.body;
+  
+  const gateway = "Delta Mithapukur SMS Aggregator (Teletalk/GP Shortcode 01711)";
+  const logPrefix = isEmergencyFallback ? "[🚨 EMERGENCY SMS TRIGGERED (FALLBACK)]" : "[SMS ALERT]";
+  
+  console.log(`${logPrefix} Sent to ${recipientType} (${recipient}): Ticket #${ticketId} - CID ${cid} | Fallback Reason: ${fallbackReason || 'N/A'}`);
+
+  res.json({
+    success: true,
+    channel: "SMS",
+    isEmergencyFallback,
+    fallbackReason: fallbackReason || (isEmergencyFallback ? "WhatsApp API failed after 3 delivery attempts" : undefined),
+    failedAttempts: isEmergencyFallback ? attemptCount : 0,
+    sentAt: new Date().toISOString(),
+    recipient,
+    recipientType,
+    gateway,
+    status: "Delivered",
+    smsBody: `[DELTA ISP NOC SMS] ${title}: ${message} (Ticket #${ticketId})`,
   });
 });
 

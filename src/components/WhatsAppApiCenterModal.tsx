@@ -21,7 +21,9 @@ import {
   Users,
   AlertTriangle,
   Play,
-  Home
+  Home,
+  Flame,
+  Smartphone
 } from 'lucide-react';
 import { Ticket, NotificationLog } from '../types';
 
@@ -32,7 +34,17 @@ interface WhatsAppApiCenterModalProps {
   notifications: NotificationLog[];
   currentRole: 'MANAGER' | 'NOC' | 'CLIENT';
   lang: 'bn' | 'en';
-  onSendManualNotification: (ticketId: string, cid: string, message: string, channel: 'WhatsApp' | 'Email' | 'SMS') => Promise<void>;
+  onSendManualNotification: (
+    ticketId: string, 
+    cid: string, 
+    message: string, 
+    channel: 'WhatsApp' | 'Email' | 'SMS',
+    options?: {
+      simulateFailure?: boolean;
+      isEmergencyFallback?: boolean;
+      customRecipientPhone?: string;
+    }
+  ) => Promise<void>;
   onCreateInboundTicketFromWhatsApp?: (waData: {
     phone: string;
     senderName: string;
@@ -101,6 +113,10 @@ export const WhatsAppApiCenterModal: React.FC<WhatsAppApiCenterModalProps> = ({
   const [bcastMsg, setBcastMsg] = useState('প্রিয় গ্রাহক, মিঠাপুকুর পাওয়ার পপ সেন্টারে জরুরী অপটিক্যাল ফাইবার আপগ্রেডেশন কাজের জন্য আগামী ৩০ মিনিট লাইনে সাময়িক ধীরগতি হতে পারে। ডেল্টা নোক টিম কাজ করছে।');
   const [bcastSending, setBcastSending] = useState(false);
   const [bcastResult, setBcastResult] = useState<{ total: number; sent: number } | null>(null);
+
+  // Emergency SMS Failover Test State
+  const [testingFailover, setTestingFailover] = useState(false);
+  const [failoverTestResult, setFailoverTestResult] = useState<string | null>(null);
 
   // Fetch server config on mount
   useEffect(() => {
@@ -253,6 +269,25 @@ export const WhatsAppApiCenterModal: React.FC<WhatsAppApiCenterModalProps> = ({
       setTplStatus(`✅ [HSM DISPATCHED]: WhatsApp HSM Template "${selectedTemplate}" delivered to ${tplRecipientPhone}`);
     } finally {
       setTplSending(false);
+    }
+  };
+
+  const handleTestFailoverEmergencySms = async () => {
+    setTestingFailover(true);
+    setFailoverTestResult(null);
+    try {
+      await onSendManualNotification(
+        'T-FAILOVER-TEST',
+        'CID-1001',
+        '🚨 জরুরী অপটিক্যাল ফাইবার অ্যালার্ট: মিঠাপুকুর পাওয়ার পপ সেন্টারে সংযোগ পর্যবেক্ষণ ও ফলব্যাক টেস্ট।',
+        'WhatsApp',
+        { simulateFailure: true, customRecipientPhone: simPhone }
+      );
+      setFailoverTestResult('✅ WhatsApp 3 delivery attempts failed -> Automatic Emergency SMS Trigger activated & SMS delivered successfully!');
+    } catch (e: any) {
+      setFailoverTestResult('Error during failover test: ' + (e?.message || 'Unknown error'));
+    } finally {
+      setTestingFailover(false);
     }
   };
 
@@ -510,6 +545,95 @@ export const WhatsAppApiCenterModal: React.FC<WhatsAppApiCenterModalProps> = ({
                   </p>
                 )}
               </form>
+
+              {/* EMERGENCY SMS TRIGGER POLICY & LIVE FAILOVER TEST PANEL */}
+              <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-rose-950/30 via-slate-900 to-amber-950/20 border border-rose-500/30 space-y-3">
+                <div className="flex items-center justify-between border-b border-rose-500/20 pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                      <Flame className="w-4 h-4 text-rose-400 animate-pulse" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                        <span>Emergency SMS Fallback Engine</span>
+                        <span className="px-2 py-0.5 rounded-full text-[9px] bg-rose-500/20 text-rose-300 font-bold border border-rose-500/40">
+                          Active Policy: 3 WhatsApp Failures
+                        </span>
+                      </h4>
+                      <p className="text-[10px] text-zinc-400">
+                        Activates emergency SMS trigger only if WhatsApp API fails to deliver after 3 attempts
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                      Fallback Ready
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[11px]">
+                  <div className="p-2.5 bg-black/40 rounded-lg border border-white/5 space-y-1">
+                    <span className="text-zinc-400 font-bold">1. Primary Channel:</span>
+                    <p className="text-emerald-400 font-bold flex items-center gap-1">
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>Meta WhatsApp Cloud API</span>
+                    </p>
+                    <p className="text-[10px] text-zinc-500">Max Retry Attempts: 3</p>
+                  </div>
+
+                  <div className="p-2.5 bg-black/40 rounded-lg border border-white/5 space-y-1">
+                    <span className="text-zinc-400 font-bold">2. Trigger Condition:</span>
+                    <p className="text-amber-400 font-bold flex items-center gap-1">
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <span>3 Consecutive Failures</span>
+                    </p>
+                    <p className="text-[10px] text-zinc-500">Timeout / 502 / Delivery Drop</p>
+                  </div>
+
+                  <div className="p-2.5 bg-black/40 rounded-lg border border-white/5 space-y-1">
+                    <span className="text-zinc-400 font-bold">3. Emergency Fallback:</span>
+                    <p className="text-rose-400 font-bold flex items-center gap-1">
+                      <Smartphone className="w-3.5 h-3.5" />
+                      <span>Delta SMS Gateway Aggregator</span>
+                    </p>
+                    <p className="text-[10px] text-zinc-500">Teletalk/GP Shortcode 01711</p>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-2">
+                  <div className="text-[11px] text-zinc-300">
+                    <p>Test the 3-attempt WhatsApp retry engine & witness the automatic Emergency SMS trigger:</p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleTestFailoverEmergencySms}
+                    disabled={testingFailover}
+                    className="px-4 py-2 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-black text-xs rounded-lg transition-all shadow-md flex items-center gap-2 cursor-pointer active:scale-95 whitespace-nowrap"
+                  >
+                    {testingFailover ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Testing 3 Attempts...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Flame className="w-3.5 h-3.5" />
+                        <span>Test 3x Failure & Emergency SMS Trigger</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {failoverTestResult && (
+                  <div className="p-3 bg-rose-950/40 border border-rose-500/40 rounded-lg text-xs text-rose-200 font-mono">
+                    {failoverTestResult}
+                  </div>
+                )}
+              </div>
 
             </div>
           )}

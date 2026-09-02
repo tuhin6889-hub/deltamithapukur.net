@@ -125,7 +125,13 @@ export interface NotificationLog {
   title: string;
   message: string;
   timestamp: string;
-  status: 'Delivered' | 'Sent';
+  status: 'Delivered' | 'Sent' | 'Failed' | 'Fallback Triggered';
+  attempts?: number;
+  isEmergencyFallback?: boolean;
+  fallbackReason?: string;
+  failedAttempts?: number;
+  deliveryLog?: string[];
+  gateway?: string;
 }
 
 export type NetworkServerType = 'OLT' | 'MikroTik' | 'Core_Router' | 'Switch' | 'Radius_Server';
@@ -264,6 +270,36 @@ export interface InventoryLog {
   previousStock: number;
   newStock: number;
   timestamp: string;
+  notes?: string;
+}
+
+export interface PopPingResult {
+  serverId: string;
+  serverName: string;
+  ipAddress: string;
+  locationArea: string;
+  type: NetworkServerType;
+  rtt: number; // latency in ms
+  packetLoss: number; // percentage (0 - 100)
+  jitter: number; // jitter in ms
+  status: 'OPTIMAL' | 'DEGRADED' | 'HIGH_LATENCY' | 'UNREACHABLE';
+  timestamp: string;
+  isHighPriority: boolean;
+  history: number[]; // last 12 ping readings in ms for sparkline
+}
+
+export interface PopLatencyAlert {
+  id: string;
+  serverId: string;
+  serverName: string;
+  ipAddress: string;
+  locationArea: string;
+  latencyMs: number;
+  thresholdMs: number;
+  packetLoss: number;
+  timestamp: string;
+  severity: 'WARNING' | 'CRITICAL';
+  acknowledged: boolean;
   notes?: string;
 }
 

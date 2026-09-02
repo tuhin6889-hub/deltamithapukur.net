@@ -34,7 +34,8 @@ import {
   Camera,
   Maximize2,
   Minimize2,
-  Package
+  Package,
+  Radio
 } from 'lucide-react';
 
 interface StaffUser {
@@ -69,6 +70,9 @@ interface NavbarProps {
   onOpenRouterQrScanner?: () => void;
   onOpenInventory?: () => void;
   inventoryLowStockCount?: number;
+  onOpenPopPingMonitor?: () => void;
+  popLatencyAlertCount?: number;
+  popAvgLatency?: number;
   onSelectTicket?: (ticket: Ticket) => void;
   // Offline Cache & Sync Props
   isOnline?: boolean;
@@ -107,6 +111,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenRouterQrScanner,
   onOpenInventory,
   inventoryLowStockCount = 0,
+  onOpenPopPingMonitor,
+  popLatencyAlertCount = 0,
+  popAvgLatency = 8,
   onSelectTicket,
   isOnline = true,
   isSimulatedOffline = false,
@@ -685,16 +692,29 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </button>
                 )}
 
-                {/* Mother Website & Marketing Portal Button */}
-                {onOpenMotherWebsiteHub && (
+
+                {/* PoP Latency Watcher & Ping Monitor Button */}
+                {onOpenPopPingMonitor && (
                   <button
-                    onClick={onOpenMotherWebsiteHub}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 rounded-xl border border-indigo-500/40 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer whitespace-nowrap hover:border-indigo-400"
-                    title="Mother Website (https://delta-mithapukur.vercel.app/) Client DB & Marketing Portal Bridge"
+                    onClick={onOpenPopPingMonitor}
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer whitespace-nowrap ${
+                      popLatencyAlertCount > 0
+                        ? 'bg-rose-950/80 hover:bg-rose-900 text-rose-200 border-rose-500/60 animate-pulse'
+                        : 'bg-slate-900 hover:bg-slate-800 text-sky-300 border-sky-500/30 hover:border-sky-500/60'
+                    }`}
+                    title="Continuous High-Priority PoP Server Ping Monitor & Latency Alerting Service"
                   >
-                    <Globe className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
-                    <span>{lang === 'bn' ? 'মাদার ওয়েবসাইট ও মার্কেটিং' : 'Mother Site & Ads'}</span>
-                    <span className="px-1.5 py-0.2 rounded bg-indigo-500/30 text-indigo-200 text-[10px] font-mono border border-indigo-400/40">LIVE</span>
+                    <Radio className={`w-3.5 h-3.5 ${popLatencyAlertCount > 0 ? 'text-rose-400 animate-spin' : 'text-sky-400'}`} />
+                    <span>{lang === 'bn' ? 'PoP পিং ওয়াচার' : 'PoP Ping Watcher'}</span>
+                    {popLatencyAlertCount > 0 ? (
+                      <span className="px-1.5 py-0.2 rounded-full bg-rose-600 text-white text-[10px] font-mono font-bold">
+                        {popLatencyAlertCount} &gt;100ms
+                      </span>
+                    ) : (
+                      <span className="px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 text-[10px] font-mono border border-sky-500/30">
+                        {popAvgLatency}ms
+                      </span>
+                    )}
                   </button>
                 )}
 

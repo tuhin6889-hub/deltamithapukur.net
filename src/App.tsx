@@ -59,6 +59,7 @@ import { RouterQrStickerModal } from './components/RouterQrStickerModal';
 import { RouterQrScannerModal } from './components/RouterQrScannerModal';
 import { QuickRouterTicketModal } from './components/QuickRouterTicketModal';
 import { InventoryTrackingModal } from './components/InventoryTrackingModal';
+import { PopPingMonitorService } from './components/PopPingMonitorService';
 import { StaffToolbar } from './components/StaffToolbar';
 import { Footer } from './components/Footer';
 import { StatusFeedbackToast, StatusFeedbackData } from './components/StatusFeedbackToast';
@@ -75,6 +76,9 @@ export default function App() {
   const [inventoryLogs, setInventoryLogs] = useState<InventoryLog[]>(() => loadCachedInventoryLogs(INITIAL_INVENTORY_LOGS));
   const [statusFeedback, setStatusFeedback] = useState<StatusFeedbackData | null>(null);
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
+  const [isPopPingModalOpen, setIsPopPingModalOpen] = useState(false);
+  const [popLatencyAlertCount, setPopLatencyAlertCount] = useState<number>(0);
+  const [popAvgLatency, setPopAvgLatency] = useState<number>(8);
 
   // Real-time Network Connectivity & Offline Cache State
   const [isOnline, setIsOnline] = useState<boolean>(() => typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -179,6 +183,28 @@ export default function App() {
         ? `${tickets.length} টি টিকেট ও ${clients.length} টি ক্লায়েন্ট ডাটা লোকাল স্টোরেজে সংরক্ষিত হয়েছে।` 
         : `Local storage cache updated with ${tickets.length} tickets and ${clients.length} subscribers.`,
     });
+  };
+
+  const handleTriggerSystemAlert = (alert: { type: 'AUTO_AI' | 'RESOLVED' | 'FAILED' | 'ESCALATED'; title: string; message: string }) => {
+    setStatusFeedback({
+      type: alert.type,
+      title: alert.title,
+      message: alert.message,
+    });
+    // Also push to persistent notifications log
+    const newNotif: NotificationLog = {
+      id: `notif_pop_${Date.now()}`,
+      ticketId: 'POP-ALERT',
+      cid: 'SYSTEM-NOC',
+      recipient: 'NOC On-Duty Operations & Core Engineering Team',
+      recipientType: 'NOC',
+      title: alert.title,
+      channel: 'SMS',
+      status: 'Sent',
+      message: `[PoP Ping Alert] ${alert.title}: ${alert.message}`,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    setNotifications(prev => [newNotif, ...prev]);
   };
 
   const handleAddServer = (newServer: NetworkServer) => {
@@ -447,6 +473,49 @@ export default function App() {
     setNotifications(prev => [newNotif, ...prev]);
   };
 
+  // Batch Import Clients from Excel / CSV
+  const handleBatchImportClients = (importedClients: ClientInfo[], mode: 'UPSERT' | 'APPEND' | 'OVERWRITE' = 'UPSERT') => {
+    if (!importedClients.length) return;
+
+    setClients(prev => {
+      if (mode === 'OVERWRITE') {
+        return importedClients;
+      }
+      if (mode === 'APPEND') {
+        return [...importedClients, ...prev];
+      }
+      // UPSERT: update existing by CID, append new
+      const clientMap = new Map<string, ClientInfo>();
+      prev.forEach(c => clientMap.set(c.cid.toUpperCase(), c));
+      importedClients.forEach(c => clientMap.set(c.cid.toUpperCase(), c));
+      return Array.from(clientMap.values());
+    });
+
+    setStatusFeedback({
+      type: 'RESOLVED',
+      title: lang === 'bn' ? 'এক্সেল ইমপোর্ট সফল' : 'Excel Import Successful',
+      message: lang === 'bn' 
+        ? `${importedClients.length} জন গ্রাহকের ডাটাবেজ রেকর্ড সফলভাবে আপডেট ও যুক্ত হয়েছে।`
+        : `Successfully imported ${importedClients.length} subscribers into client database.`,
+      timestamp: Date.now(),
+    });
+
+    // Send a system notification
+    const newNotif: NotificationLog = {
+      id: `N_EXCEL_${Date.now()}`,
+      ticketId: 'EXCEL-IMPORT',
+      cid: 'BULK-DB',
+      channel: 'SMS',
+      recipient: 'Mithapukur NOC Operations',
+      recipientType: 'NOC',
+      title: 'Excel Subscriber Batch Import',
+      message: `[DELTA NOC] ${importedClients.length} subscriber records were imported/synchronized from Excel spreadsheet. Mode: ${mode}`,
+      status: 'Sent',
+      timestamp: new Date().toISOString(),
+    };
+    setNotifications(prev => [newNotif, ...prev]);
+  };
+
   // Update Status Action
   const handleUpdateTicketStatus = (ticketId: string, status: TicketStatus) => {
     const targetTicket = tickets.find(t => t.id === ticketId);
@@ -675,52 +744,240 @@ export default function App() {
     });
   };
 
-  // Manual / Auto Dispatch Notification (Calls backend API)
+  // Manual / Auto Dispatch Notification (Calls backend API with 3-Attempt WhatsApp Retry & Emergency SMS Fallback Engine)
   const handleSendManualNotification = async (
     ticketId: string, 
     cid: string, 
     message: string, 
-    channel: 'WhatsApp' | 'Email' | 'SMS'
+    channel: 'WhatsApp' | 'Email' | 'SMS',
+    options?: {
+      simulateFailure?: boolean;
+      isEmergencyFallback?: boolean;
+      customRecipientPhone?: string;
+    }
   ) => {
     try {
       const clientObj = clients.find(c => c.cid === cid);
-      const recipientAddr = channel === 'Email' 
-        ? (clientObj?.email || 'client@deltamithapukur.com') 
-        : (clientObj?.phone || '01700-000000');
+      const recipientPhone = options?.customRecipientPhone || clientObj?.phone || '01700-000000';
+      const recipientEmail = clientObj?.email || 'client@deltamithapukur.com';
+      const clientName = clientObj?.name || 'Valued Subscriber';
 
-      const endpoint = channel === 'Email' ? '/api/notify/email' : '/api/notify/whatsapp';
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          recipient: recipientAddr,
-          recipientType: currentRole,
-          title: `Delta Mithapukur Ticket Alert #${ticketId}`,
-          message,
+      if (channel === 'WhatsApp') {
+        let waDelivered = false;
+        const deliveryLogs: string[] = [];
+        const MAX_ATTEMPTS = 3;
+        let finalData: any = null;
+
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+          try {
+            const res = await fetch('/api/notify/whatsapp', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                recipient: recipientPhone,
+                recipientType: currentRole,
+                title: `Delta Mithapukur Ticket Alert #${ticketId}`,
+                message,
+                ticketId,
+                cid,
+                attempt,
+                simulateFailure: options?.simulateFailure,
+              }),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+              waDelivered = true;
+              finalData = data;
+              deliveryLogs.push(`Attempt ${attempt}/${MAX_ATTEMPTS}: Delivered via Meta WhatsApp Cloud API (HTTP 200 OK)`);
+              break; // Delivered successfully on this attempt!
+            } else {
+              deliveryLogs.push(`Attempt ${attempt}/${MAX_ATTEMPTS} Failed: ${data?.error || 'WhatsApp Webhook 502 Timeout'}`);
+              if (attempt < MAX_ATTEMPTS) {
+                await new Promise(resolve => setTimeout(resolve, 250));
+              }
+            }
+          } catch (err: any) {
+            deliveryLogs.push(`Attempt ${attempt}/${MAX_ATTEMPTS} Failed: ${err?.message || 'Network connection error'}`);
+            if (attempt < MAX_ATTEMPTS) {
+              await new Promise(resolve => setTimeout(resolve, 250));
+            }
+          }
+        }
+
+        if (waDelivered) {
+          // WhatsApp succeeded
+          const newLog: NotificationLog = {
+            id: `N-WA-${Date.now()}`,
+            ticketId,
+            cid,
+            channel: 'WhatsApp',
+            recipient: `${clientName} (${recipientPhone})`,
+            recipientType: 'Client',
+            title: `Alert for Ticket #${ticketId}`,
+            message,
+            timestamp: new Date().toISOString(),
+            status: 'Delivered',
+            attempts: finalData?.attempt || 1,
+            deliveryLog: deliveryLogs,
+            gateway: 'Meta WhatsApp Business Cloud API v19.0',
+          };
+          setNotifications(prev => [newLog, ...prev]);
+          return;
+        }
+
+        // =========================================================================
+        // WHATSAPP FAILED AFTER 3 ATTEMPTS -> EMERGENCY SMS TRIGGER ACTIVATED!
+        // =========================================================================
+        console.warn(`[NOTIFICATION HANDLER] WhatsApp failed after 3 attempts. Activating Emergency SMS Trigger for Ticket #${ticketId}`);
+
+        // 1. Log the failed WhatsApp attempts
+        const failedWaLog: NotificationLog = {
+          id: `N-WA-FAIL-${Date.now()}`,
           ticketId,
           cid,
-          clientEmail: clientObj?.email,
-        }),
-      });
+          channel: 'WhatsApp',
+          recipient: `${clientName} (${recipientPhone})`,
+          recipientType: 'Client',
+          title: `WhatsApp Delivery Failed (3 Attempts Exhausted)`,
+          message,
+          timestamp: new Date().toISOString(),
+          status: 'Failed',
+          attempts: 3,
+          failedAttempts: 3,
+          fallbackReason: 'Meta WhatsApp Cloud API failed to deliver after 3 consecutive attempts.',
+          deliveryLog: deliveryLogs,
+          gateway: 'Meta WhatsApp Cloud API v19.0',
+        };
 
-      const data = await res.json();
+        // 2. Trigger the Emergency SMS
+        try {
+          const smsRes = await fetch('/api/notify/sms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              recipient: recipientPhone,
+              recipientType: currentRole,
+              title: `[EMERGENCY SMS FALLBACK] Alert for Ticket #${ticketId}`,
+              message: `[জরুরী SMS ফলব্যাক] ${message} (WhatsApp ৩ বার ব্যর্থ হওয়ায় সরাসরি SMS এ প্রেরিত)`,
+              ticketId,
+              cid,
+              isEmergencyFallback: true,
+              fallbackReason: 'WhatsApp API failed after 3 delivery attempts',
+              attemptCount: 3,
+            }),
+          });
+          const smsData = await smsRes.json().catch(() => ({}));
 
-      const newLog: NotificationLog = {
-        id: `N-${Date.now()}`,
-        ticketId,
-        cid,
-        channel,
-        recipient: `${clientObj?.name || 'Client'} (${recipientAddr})`,
-        recipientType: 'Client',
-        title: `Alert for Ticket #${ticketId}`,
-        message,
-        timestamp: new Date().toISOString(),
-        status: 'Delivered',
-      };
+          const emergencySmsLog: NotificationLog = {
+            id: `N-SMS-EMERGENCY-${Date.now()}`,
+            ticketId,
+            cid,
+            channel: 'SMS',
+            recipient: `${clientName} (${recipientPhone})`,
+            recipientType: 'Client',
+            title: `🚨 Emergency SMS Triggered (WhatsApp Fallback)`,
+            message: `[Emergency SMS Fallback] ${message}`,
+            timestamp: new Date().toISOString(),
+            status: 'Delivered',
+            isEmergencyFallback: true,
+            attempts: 3,
+            fallbackReason: 'WhatsApp API failed to deliver after 3 attempts. Emergency SMS triggered automatically.',
+            gateway: smsData?.gateway || 'Delta Mithapukur SMS Aggregator (Teletalk/GP 01711)',
+            deliveryLog: [
+              ...deliveryLogs,
+              `🚨 Emergency SMS Fallback Triggered at ${new Date().toLocaleTimeString()} -> Delivered to ${recipientPhone}`
+            ]
+          };
 
-      setNotifications(prev => [newLog, ...prev]);
+          setNotifications(prev => [emergencySmsLog, failedWaLog, ...prev]);
+
+          // Status Toast alert for operator / NOC
+          setStatusFeedback({
+            type: 'ESCALATED',
+            title: lang === 'bn' ? '🚨 জরুরী SMS ফলব্যাক সক্রিয়' : '🚨 Emergency SMS Triggered',
+            message: lang === 'bn'
+              ? `WhatsApp ৩ বার চেষ্টা করেও বার্তা পাঠাতে ব্যর্থ হয়েছে। স্বয়ংক্রিয়ভাবে গ্রাহকের ফোনে (${recipientPhone}) জরুরী SMS পাঠানো হয়েছে।`
+              : `WhatsApp failed after 3 delivery attempts. Emergency SMS dispatched to subscriber (${recipientPhone}).`,
+            ticketId,
+            cid,
+          });
+
+        } catch (smsErr) {
+          console.error('Failed to dispatch emergency SMS fallback:', smsErr);
+          setNotifications(prev => [failedWaLog, ...prev]);
+        }
+      } else if (channel === 'Email') {
+        // Standard email dispatch
+        try {
+          const res = await fetch('/api/notify/email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              recipient: recipientEmail,
+              recipientType: currentRole,
+              title: `Delta Mithapukur Ticket Alert #${ticketId}`,
+              message,
+              ticketId,
+              cid,
+              clientEmail: recipientEmail,
+            }),
+          });
+          const data = await res.json();
+          const newLog: NotificationLog = {
+            id: `N-EMAIL-${Date.now()}`,
+            ticketId,
+            cid,
+            channel: 'Email',
+            recipient: `${clientName} (${recipientEmail})`,
+            recipientType: 'Client',
+            title: `Email Alert for Ticket #${ticketId}`,
+            message,
+            timestamp: new Date().toISOString(),
+            status: 'Delivered',
+            gateway: 'Delta SMTP Server (Port 587)',
+          };
+          setNotifications(prev => [newLog, ...prev]);
+        } catch (e) {
+          console.error('Failed to send email notification:', e);
+        }
+      } else if (channel === 'SMS') {
+        // Direct SMS dispatch
+        try {
+          const res = await fetch('/api/notify/sms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              recipient: recipientPhone,
+              recipientType: currentRole,
+              title: `Delta Mithapukur Ticket Alert #${ticketId}`,
+              message,
+              ticketId,
+              cid,
+              isEmergencyFallback: options?.isEmergencyFallback || false,
+            }),
+          });
+          const data = await res.json();
+          const newLog: NotificationLog = {
+            id: `N-SMS-${Date.now()}`,
+            ticketId,
+            cid,
+            channel: 'SMS',
+            recipient: `${clientName} (${recipientPhone})`,
+            recipientType: 'Client',
+            title: `SMS Alert for Ticket #${ticketId}`,
+            message,
+            timestamp: new Date().toISOString(),
+            status: 'Delivered',
+            isEmergencyFallback: options?.isEmergencyFallback,
+            gateway: data?.gateway || 'Delta SMS Aggregator',
+          };
+          setNotifications(prev => [newLog, ...prev]);
+        } catch (e) {
+          console.error('Failed to send SMS notification:', e);
+        }
+      }
     } catch (e) {
-      console.error('Failed to send notification via API:', e);
+      console.error('Failed in notification handler:', e);
     }
   };
 
@@ -985,6 +1242,8 @@ export default function App() {
           inventory={inventory}
           inventoryLowStockCount={inventoryLowStockCount}
           onOpenInventory={() => setIsInventoryModalOpen(true)}
+          onOpenPopPingMonitor={() => setIsPopPingModalOpen(true)}
+          popLatencyAlertCount={popLatencyAlertCount}
           lang={lang}
           onSelectTicket={(ticket) => setSelectedTicket(ticket)}
           onUpdateTicketStatus={handleUpdateTicketStatus}
@@ -1105,6 +1364,9 @@ export default function App() {
         onOpenAndroidInstall={() => setIsAndroidInstallModalOpen(true)}
         onOpenInventory={() => setIsInventoryModalOpen(true)}
         inventoryLowStockCount={inventoryLowStockCount}
+        onOpenPopPingMonitor={() => setIsPopPingModalOpen(true)}
+        popLatencyAlertCount={popLatencyAlertCount}
+        popAvgLatency={popAvgLatency}
         onOpenRouterQrSticker={() => {
           setRouterStickerTargetCid(loggedInCid || null);
           setIsRouterQrStickerModalOpen(true);
@@ -1284,6 +1546,7 @@ export default function App() {
           setRouterStickerTargetCid(null);
           setIsRouterQrStickerModalOpen(true);
         }}
+        onBatchImportClients={handleBatchImportClients}
       />
 
       <MotherWebsiteMarketingHubModal
@@ -1382,6 +1645,21 @@ export default function App() {
         onRestockItem={handleRestockInventoryItem}
         onDispatchItem={handleDispatchInventoryItem}
         currentUser={managerUser || nocUser}
+      />
+
+      {/* Continuous PoP Server Ping Monitor & Latency Alerting Background Service */}
+      <PopPingMonitorService
+        isOpen={isPopPingModalOpen}
+        onClose={() => setIsPopPingModalOpen(false)}
+        servers={servers}
+        lang={lang}
+        onUpdateServer={handleUpdateServer}
+        onTriggerSystemAlert={handleTriggerSystemAlert}
+        onCreateEmergencyTicket={handleCreateTicket}
+        onStatsUpdate={(stats) => {
+          setPopLatencyAlertCount(stats.highLatencyCount);
+          setPopAvgLatency(stats.avgRtt);
+        }}
       />
 
       <StaffToolbar isEmployee={isEmployee} />

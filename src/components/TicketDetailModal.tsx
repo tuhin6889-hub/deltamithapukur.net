@@ -24,7 +24,8 @@ import {
   Check,
   AlertOctagon,
   Flame,
-  Info
+  Info,
+  Printer
 } from 'lucide-react';
 
 interface TicketDetailModalProps {
@@ -34,7 +35,17 @@ interface TicketDetailModalProps {
   onUpdateTicketStatus: (ticketId: string, status: TicketStatus) => void;
   onAssignNocStaff: (ticketId: string, staffName: string) => void;
   onAddComment: (ticketId: string, text: string) => void;
-  onSendManualNotification: (ticketId: string, cid: string, message: string, channel: 'WhatsApp' | 'Email' | 'SMS') => void;
+  onSendManualNotification: (
+    ticketId: string, 
+    cid: string, 
+    message: string, 
+    channel: 'WhatsApp' | 'Email' | 'SMS',
+    options?: {
+      simulateFailure?: boolean;
+      isEmergencyFallback?: boolean;
+      customRecipientPhone?: string;
+    }
+  ) => void;
   onTriggerAiDiagnosis: (ticket: Ticket) => Promise<void>;
   aiLoading: boolean;
   lang: 'bn' | 'en';
@@ -71,6 +82,10 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
     onSendManualNotification(ticket.id, ticket.cid, msg, 'WhatsApp');
     setNotifSuccessMsg('WhatsApp alert dispatched to Manager & Client!');
     setTimeout(() => setNotifSuccessMsg(''), 3000);
+  };
+
+  const handlePrintTicket = () => {
+    window.print();
   };
 
   return (
@@ -141,9 +156,19 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Print Ticket Button for Physical Office Archive */}
+              <button
+                onClick={handlePrintTicket}
+                className="px-2.5 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-bold rounded-xl border border-sky-200 transition-all flex items-center gap-1.5 active:scale-95 shadow-sm cursor-pointer"
+                title={lang === 'bn' ? 'অফিস আর্কাইভের জন্য প্রিন্ট করুন' : 'Print for Office Physical Archive'}
+              >
+                <Printer className="w-3.5 h-3.5 text-sky-600" />
+                <span>{lang === 'bn' ? 'প্রিন্ট' : 'Print'}</span>
+              </button>
+
               <button
                 onClick={onClose}
-                className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-all flex items-center gap-1.5 active:scale-95"
+                className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
                 title="Return to Home Page"
               >
                 <Home className="w-3.5 h-3.5 text-emerald-600" />
@@ -152,7 +177,7 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
 
               <button 
                 onClick={onClose}
-                className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full"
+                className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full cursor-pointer"
                 title="Close"
               >
                 <X className="w-4 h-4" />
@@ -244,11 +269,11 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
             </p>
           </div>
 
-          {/* Action Buttons: WhatsApp Alert Dispatch & AI Diagnostics */}
+          {/* Action Buttons: WhatsApp Alert Dispatch, AI Diagnostics & Print Archive */}
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleTriggerWhatsApp}
-              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-sm"
+              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
             >
               <BellRing className="w-4 h-4" />
               <span>{lang === 'bn' ? 'হোয়াটসঅ্যাপ অ্যালার্ট পাঠাও' : 'Send WhatsApp Alert'}</span>
@@ -257,10 +282,19 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
             <button
               onClick={() => onTriggerAiDiagnosis(ticket)}
               disabled={aiLoading}
-              className="px-3.5 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+              className="px-3.5 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50 active:scale-95 cursor-pointer"
             >
               {aiLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
               <span>{aiLoading ? 'Generating AI Guide...' : 'AI NOC Analysis'}</span>
+            </button>
+
+            <button
+              onClick={handlePrintTicket}
+              className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-sky-300 border border-sky-500/40 hover:border-sky-400 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+              title={lang === 'bn' ? 'অফিস আর্কাইভের জন্য প্রিন্ট করুন' : 'Print for Office Physical Archive'}
+            >
+              <Printer className="w-4 h-4 text-sky-400" />
+              <span>{lang === 'bn' ? 'অফিস আর্কাইভ প্রিন্ট' : 'Print Docket'}</span>
             </button>
           </div>
 
@@ -330,7 +364,7 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
               />
               <button
                 type="submit"
-                className="px-4 py-2 bg-slate-900 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1"
+                className="px-4 py-2 bg-slate-900 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Post</span>
@@ -340,6 +374,231 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({
         </div>
 
       </div>
+
+      {/* =========================================================================
+          PRINTER-FRIENDLY PHYSICAL OFFICE ARCHIVE DOCKET (VISIBLE ON PRINT ONLY)
+          ========================================================================= */}
+      <div id="printable-ticket-archive" className="hidden print:block font-sans text-black p-6 max-w-4xl mx-auto bg-white">
+        {/* Header Strip with Branding & Document Classification */}
+        <div className="border-b-2 border-black pb-4 mb-4 flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-black uppercase tracking-wider text-black">
+                Delta Internet Service
+              </h1>
+              <span className="text-xs font-bold border border-black px-2 py-0.5 rounded">
+                Mithapukur NOC
+              </span>
+            </div>
+            <p className="text-xs font-bold text-gray-700 mt-0.5">
+              Network Operations & Field Technical Support Center • Mithapukur, Rangpur
+            </p>
+            <p className="text-[11px] text-gray-600">
+              Hotline: +880 1711-000000 | Email: noc@deltamithapukur.net | Web: portal.deltamithapukur.net
+            </p>
+          </div>
+          <div className="text-right border border-black p-2 rounded bg-gray-50 min-w-[200px]">
+            <span className="block text-[10px] font-black uppercase tracking-widest text-gray-700">
+              Official Physical Archive
+            </span>
+            <span className="block text-base font-black font-mono">
+              WORK ORDER #{ticket.id}
+            </span>
+            <span className="block text-[10px] font-mono text-gray-600">
+              Print Date: {new Date().toLocaleString('en-GB')}
+            </span>
+          </div>
+        </div>
+
+        {/* Status & Priority Badge Banner */}
+        <div className="border border-black bg-gray-100 p-2.5 rounded mb-4 flex items-center justify-between text-xs font-bold font-mono">
+          <div>
+            <span>PRIORITY: </span>
+            <strong className="text-sm underline">
+              {ticket.priority.toUpperCase()} ({ticket.priority === 'Urgent' ? '2-Hour Emergency SLA' : ticket.priority === 'High' ? '4-Hour High SLA' : 'Standard SLA'})
+            </strong>
+          </div>
+          <div>
+            <span>CURRENT STATUS: </span>
+            <strong className="text-sm uppercase border-b-2 border-black pb-0.5">
+              {ticket.status}
+            </strong>
+          </div>
+          <div>
+            <span>CREATED: </span>
+            <span>{ticket.createdDate || new Date().toISOString().split('T')[0]}</span>
+          </div>
+        </div>
+
+        {/* Core Matrix: Client & Technical Parameters */}
+        <div className="mb-4">
+          <h2 className="text-xs font-black uppercase tracking-wider bg-black text-white px-2 py-1 mb-1">
+            Section 1: Customer & Connection Parameters
+          </h2>
+          <table className="w-full border-collapse border border-black text-xs">
+            <tbody>
+              <tr className="border-b border-black">
+                <td className="border-r border-black p-2 font-bold bg-gray-100 w-1/4">Customer Name</td>
+                <td className="border-r border-black p-2 font-semibold w-1/4">{ticket.clientName}</td>
+                <td className="border-r border-black p-2 font-bold bg-gray-100 w-1/4">Customer ID (CID)</td>
+                <td className="p-2 font-mono font-bold w-1/4">{ticket.cid}</td>
+              </tr>
+              <tr className="border-b border-black">
+                <td className="border-r border-black p-2 font-bold bg-gray-100">Contact Number</td>
+                <td className="border-r border-black p-2 font-mono">{ticket.clientPhone}</td>
+                <td className="border-r border-black p-2 font-bold bg-gray-100">Subscribed Package</td>
+                <td className="p-2 font-semibold">{ticket.packageSpeed}</td>
+              </tr>
+              <tr className="border-b border-black">
+                <td className="border-r border-black p-2 font-bold bg-gray-100">Service Area / Node</td>
+                <td className="border-r border-black p-2">{ticket.area}</td>
+                <td className="border-r border-black p-2 font-bold bg-gray-100">Client Address</td>
+                <td className="p-2">{ticket.clientAddress || ticket.area}</td>
+              </tr>
+              <tr>
+                <td className="border-r border-black p-2 font-bold bg-gray-100">Optical Rx Power</td>
+                <td className="border-r border-black p-2 font-mono font-bold">
+                  {ticket.opticalPower || '-22.4 dBm'}
+                </td>
+                <td className="border-r border-black p-2 font-bold bg-gray-100">Gateway Latency / Ping</td>
+                <td className="p-2 font-mono">
+                  {ticket.pingMs ? `${ticket.pingMs} ms` : '18 ms'}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Section 2: Ticket Description & Fault Details */}
+        <div className="mb-4 print-avoid-break">
+          <h2 className="text-xs font-black uppercase tracking-wider bg-black text-white px-2 py-1 mb-1">
+            Section 2: Reported Issue & Incident Details
+          </h2>
+          <div className="border border-black p-3 rounded text-xs space-y-2">
+            <div className="flex items-center justify-between border-b border-gray-300 pb-1.5">
+              <span className="font-bold">
+                Category: <span className="font-mono">{ticket.category}</span>
+              </span>
+              <span className="font-bold">
+                Assigned NOC Staff: <span className="font-mono">{ticket.assignedNoc || 'Field Tech Roster'}</span>
+              </span>
+            </div>
+            <div>
+              <p className="font-bold text-xs">Problem Title: {ticket.title}</p>
+              <p className="text-xs text-gray-800 mt-1 whitespace-pre-wrap bg-gray-50 p-2 border border-gray-200 rounded">
+                {ticket.description}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 3: Diagnostic & Troubleshooting Guidance (if available) */}
+        {ticket.aiDiagnosis && (
+          <div className="mb-4 print-avoid-break">
+            <h2 className="text-xs font-black uppercase tracking-wider bg-black text-white px-2 py-1 mb-1">
+              Section 3: NOC Diagnostic & Field Guidelines
+            </h2>
+            <div className="border border-black p-3 rounded text-xs space-y-2 bg-gray-50">
+              <p className="font-bold">
+                Summary: <span className="font-normal">{ticket.aiDiagnosis.summaryBengali}</span>
+              </p>
+              <div className="border-t border-gray-300 pt-1.5">
+                <p className="font-bold mb-1">Field Splicing & Testing Steps:</p>
+                <ol className="list-decimal list-inside space-y-0.5 pl-1">
+                  {ticket.aiDiagnosis.nocSteps.map((step, idx) => (
+                    <li key={idx} className="text-gray-800">{step}</li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Section 4: Communication & Activity History */}
+        {ticket.comments.length > 0 && (
+          <div className="mb-4 print-avoid-break">
+            <h2 className="text-xs font-black uppercase tracking-wider bg-black text-white px-2 py-1 mb-1">
+              Section 4: Support Activity & Comments Log
+            </h2>
+            <table className="w-full border-collapse border border-black text-[11px]">
+              <thead>
+                <tr className="bg-gray-100 border-b border-black">
+                  <th className="border-r border-black p-1 text-left w-24">Timestamp</th>
+                  <th className="border-r border-black p-1 text-left w-32">Staff / Role</th>
+                  <th className="p-1 text-left">Note / Comment</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ticket.comments.map((comm) => (
+                  <tr key={comm.id} className="border-b border-black">
+                    <td className="border-r border-black p-1 font-mono">{new Date(comm.timestamp).toLocaleString('en-GB')}</td>
+                    <td className="border-r border-black p-1 font-bold">{comm.author} ({comm.role})</td>
+                    <td className="p-1">{comm.text}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Section 5: Field Resolution & Physical Sign-off Block */}
+        <div className="border border-black p-3 rounded mt-4 print-avoid-break bg-gray-50">
+          <h2 className="text-xs font-black uppercase tracking-wider border-b border-black pb-1 mb-2">
+            Section 5: Physical Field Resolution & Office Sign-Off
+          </h2>
+          
+          <div className="grid grid-cols-2 gap-4 text-xs mb-3">
+            <div>
+              <p className="font-bold mb-1">Hardware / Equipment Replaced:</p>
+              <div className="space-y-1 text-[11px]">
+                <label className="flex items-center gap-1.5">
+                  <span className="inline-block w-3.5 h-3.5 border border-black" /> [ ] Drop Cable / Fiber Core
+                </label>
+                <label className="flex items-center gap-1.5">
+                  <span className="inline-block w-3.5 h-3.5 border border-black" /> [ ] Optical Network Unit (ONU) - Serial: __________________
+                </label>
+                <label className="flex items-center gap-1.5">
+                  <span className="inline-block w-3.5 h-3.5 border border-black" /> [ ] Patch Cord / Fast Connector / Adapter
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <p className="font-bold mb-1">Post-Repair Optical Verification:</p>
+              <p className="text-[11px] mb-1">Measured Rx Signal Power: ____________ dBm (Target: -18 to -24 dBm)</p>
+              <p className="text-[11px]">Speedtest Verified: ____________ Mbps Download / Upload</p>
+            </div>
+          </div>
+
+          {/* Signatures Row */}
+          <div className="grid grid-cols-3 gap-6 pt-6 border-t border-black text-center text-xs">
+            <div>
+              <div className="border-b border-black pb-1 mb-1 font-mono">____________________________</div>
+              <p className="font-bold">Field Technician Signature</p>
+              <p className="text-[10px] text-gray-600">Date: ____/____/2026</p>
+            </div>
+
+            <div>
+              <div className="border-b border-black pb-1 mb-1 font-mono">____________________________</div>
+              <p className="font-bold">NOC Supervisor Seal / Sign</p>
+              <p className="text-[10px] text-gray-600">Verified & Approved</p>
+            </div>
+
+            <div>
+              <div className="border-b border-black pb-1 mb-1 font-mono">____________________________</div>
+              <p className="font-bold">Customer Acknowledgment</p>
+              <p className="text-[10px] text-gray-600">Service Restored Satisfactorily</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Audit Notice */}
+        <div className="mt-4 pt-2 border-t border-gray-300 text-[10px] text-gray-500 flex justify-between">
+          <span>Delta Internet Service Mithapukur NOC • Official Physical Archive Record</span>
+          <span>Confidential Support Work Order Document</span>
+        </div>
+      </div>
     </div>
   );
 };
+

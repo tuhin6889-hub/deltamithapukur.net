@@ -47,3 +47,42 @@
   letter-spacing: 0.18em;
 }
 
+/* =========================================================================
+   PHYSICAL OFFICE ARCHIVE PRINT STYLING
+   ========================================================================= */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Hide all screen-only UI elements during printing */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Only show the dedicated physical print archive document */
+  #printable-ticket-archive,
+  #printable-ticket-archive * {
+    visibility: visible;
+  }
+
+  #printable-ticket-archive {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    display: block !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Avoid page breaks inside table sections */
+  .print-avoid-break {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
+

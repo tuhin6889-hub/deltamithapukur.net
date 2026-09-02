@@ -45,6 +45,8 @@ interface NocPortalProps {
   inventory?: InventoryItem[];
   inventoryLowStockCount?: number;
   onOpenInventory?: () => void;
+  onOpenPopPingMonitor?: () => void;
+  popLatencyAlertCount?: number;
   lang: 'bn' | 'en';
   onSelectTicket: (ticket: Ticket) => void;
   onUpdateTicketStatus: (ticketId: string, status: TicketStatus) => void;
@@ -62,6 +64,8 @@ export const NocPortal: React.FC<NocPortalProps> = ({
   inventory = [],
   inventoryLowStockCount = 0,
   onOpenInventory,
+  onOpenPopPingMonitor,
+  popLatencyAlertCount = 0,
   lang,
   onSelectTicket,
   onUpdateTicketStatus,
@@ -627,6 +631,42 @@ export const NocPortal: React.FC<NocPortalProps> = ({
               </div>
             )}
           </div>
+
+          {/* BENTO CARD: Continuous PoP Ping Watcher & Latency Alerts */}
+          {onOpenPopPingMonitor && (
+            <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <Radio className={`w-5 h-5 ${popLatencyAlertCount > 0 ? 'text-rose-400 animate-pulse' : 'text-sky-400'}`} />
+                  <h3 className="font-mono font-bold text-sm text-sky-300">
+                    {lang === 'bn' ? 'PoP লেটেন্সি পিং ওয়াচার' : 'PoP Continuous Ping Watcher'}
+                  </h3>
+                </div>
+                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                  popLatencyAlertCount > 0 
+                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse' 
+                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                }`}>
+                  {popLatencyAlertCount > 0 ? `${popLatencyAlertCount} ALERTS (>100ms)` : 'ACTIVE (<30ms)'}
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-400">
+                {lang === 'bn' 
+                  ? 'হাই-প্রায়োরিটি PoP সার্ভারে লেটেন্সি ১০০ms অতিক্রম করলে সিস্টেম স্বয়ংক্রিয়ভাবে অ্যালার্ট দিচ্ছে।' 
+                  : 'Simulating continuous ICMP echo health checks across PoP Core OLTs & MikroTiks (>100ms alert).'}
+              </p>
+
+              <button
+                onClick={onOpenPopPingMonitor}
+                className="w-full py-2.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
+              >
+                <Activity className="w-4 h-4 text-sky-200 animate-pulse" />
+                <span>{lang === 'bn' ? 'PoP লাইভ পিং স্টুডিও খুলুন' : 'Open PoP Ping Diagnostics Studio'}</span>
+                <ChevronRight className="w-4 h-4 text-sky-200" />
+              </button>
+            </div>
+          )}
 
           {/* BENTO CARD 3: NOC Engineers On-Duty Roster */}
           <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">

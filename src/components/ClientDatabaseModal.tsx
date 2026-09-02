@@ -30,9 +30,18 @@ import {
   CreditCard,
   Laptop,
   Radio,
-  FileCheck
+  FileCheck,
+  FileSpreadsheet,
+  UploadCloud,
+  ChevronDown
 } from 'lucide-react';
 import { ClientInfo } from '../types';
+import { 
+  exportClientsToExcel, 
+  downloadClientExcelTemplate, 
+  downloadClientCsvTemplate 
+} from '../utils/excelHelper';
+import { ClientExcelImportModal } from './ClientExcelImportModal';
 
 interface ClientDatabaseModalProps {
   isOpen: boolean;
@@ -42,6 +51,7 @@ interface ClientDatabaseModalProps {
   onOpenAddNewClient?: () => void;
   onOpenRouterQrStickerForClient?: (cid: string) => void;
   onOpenBatchRouterQrStickers?: () => void;
+  onBatchImportClients?: (importedClients: ClientInfo[], mode: 'UPSERT' | 'APPEND' | 'OVERWRITE') => void;
 }
 
 export const ClientDatabaseModal: React.FC<ClientDatabaseModalProps> = ({
@@ -52,11 +62,14 @@ export const ClientDatabaseModal: React.FC<ClientDatabaseModalProps> = ({
   onOpenAddNewClient,
   onOpenRouterQrStickerForClient,
   onOpenBatchRouterQrStickers,
+  onBatchImportClients,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedArea, setSelectedArea] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [inspectClient, setInspectClient] = useState<ClientInfo | null>(null);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   if (!isOpen) return null;
 
@@ -77,6 +90,18 @@ export const ClientDatabaseModal: React.FC<ClientDatabaseModalProps> = ({
 
     return matchesSearch && matchesArea && matchesStatus;
   });
+
+  const handleExportExcel = () => {
+    if (filteredClients.length === 0) return;
+    exportClientsToExcel(filteredClients, 'Delta_ISP_Clients_Filtered');
+    setShowExportMenu(false);
+  };
+
+  const handleExportAllExcel = () => {
+    if (clients.length === 0) return;
+    exportClientsToExcel(clients, 'Delta_ISP_All_Subscribers_Master');
+    setShowExportMenu(false);
+  };
 
   const handleDownloadCSV = () => {
     if (filteredClients.length === 0) return;
@@ -147,6 +172,7 @@ export const ClientDatabaseModal: React.FC<ClientDatabaseModalProps> = ({
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    setShowExportMenu(false);
   };
 
   const totalClients = clients.length;
@@ -181,13 +207,92 @@ export const ClientDatabaseModal: React.FC<ClientDatabaseModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Download Excel Template Button */}
+            <button
+              onClick={downloadClientExcelTemplate}
+              className="px-3 py-1.5 bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/40 font-extrabold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+              title="Download official bulk import Excel template (.xlsx) with CID, Name, Phone, Address, Area, Package, Email"
+            >
+              <Download className="w-3.5 h-3.5 text-sky-400" />
+              <span>{lang === 'bn' ? 'এক্সেল টেমপ্লেট ডাউনলোড' : 'Download Excel Template'}</span>
+            </button>
+
+            {/* Excel Import Button */}
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+              title="Import Subscribers from Excel (.xlsx, .xls, .csv)"
+            >
+              <UploadCloud className="w-4 h-4 text-emerald-100" />
+              <span>{lang === 'bn' ? 'এক্সেল ইমপোর্ট' : 'Excel Import'}</span>
+            </button>
+
+            {/* Excel Export Button */}
+            <div className="relative">
+              <button
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                title="Export Subscriber Database to Excel (.xlsx)"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                <span>{lang === 'bn' ? 'এক্সেল এক্সপোর্ট' : 'Excel Export'}</span>
+                <ChevronDown className="w-3 h-3 text-slate-400" />
+              </button>
+
+              {showExportMenu && (
+                <div className="absolute right-0 top-full mt-1 w-56 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl py-1.5 z-50 text-xs font-mono">
+                  <button
+                    onClick={handleExportExcel}
+                    className="w-full px-3 py-2 text-left text-slate-200 hover:bg-slate-800 hover:text-emerald-300 flex items-center gap-2 cursor-pointer"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Export Filtered ({filteredClients.length}) to .xlsx</span>
+                  </button>
+                  <button
+                    onClick={handleExportAllExcel}
+                    className="w-full px-3 py-2 text-left text-slate-200 hover:bg-slate-800 hover:text-emerald-300 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Database className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Export All ({clients.length}) to .xlsx</span>
+                  </button>
+                  <button
+                    onClick={handleDownloadCSV}
+                    className="w-full px-3 py-2 text-left text-slate-200 hover:bg-slate-800 hover:text-amber-300 flex items-center gap-2 cursor-pointer border-t border-slate-800"
+                  >
+                    <Download className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Export as CSV (.csv)</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      downloadClientExcelTemplate();
+                      setShowExportMenu(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sky-300 hover:bg-slate-800 flex items-center gap-2 cursor-pointer border-t border-slate-800"
+                  >
+                    <Download className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Download Excel Template (.xlsx)</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      downloadClientCsvTemplate();
+                      setShowExportMenu(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-slate-400 hover:bg-slate-800 hover:text-white flex items-center gap-2 cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Download CSV Template (.csv)</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
             {onOpenAddNewClient && (
               <button
                 onClick={onOpenAddNewClient}
                 className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
               >
                 <UserPlus className="w-4 h-4 text-slate-950" />
-                <span className="hidden sm:inline">{lang === 'bn' ? 'নতুন ক্লায়েন্ট যোগ করুন' : 'Add New Client'}</span>
+                <span className="hidden sm:inline">{lang === 'bn' ? 'নতুন ক্লায়েন্ট' : 'Add Client'}</span>
               </button>
             )}
 
@@ -197,7 +302,7 @@ export const ClientDatabaseModal: React.FC<ClientDatabaseModalProps> = ({
               title="Return to Home Page"
             >
               <Home className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden sm:inline">{lang === 'bn' ? 'হোম পেজ' : 'Home Page'}</span>
+              <span className="hidden sm:inline">{lang === 'bn' ? 'হোম' : 'Home'}</span>
             </button>
 
             <button
@@ -266,10 +371,42 @@ export const ClientDatabaseModal: React.FC<ClientDatabaseModalProps> = ({
               <option value="Suspended">Suspended</option>
             </select>
 
+            {/* Download Excel Template */}
+            <button
+              onClick={downloadClientExcelTemplate}
+              className="px-3 py-2 bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 font-bold text-xs rounded-xl border border-sky-500/40 flex items-center gap-1.5 transition-all shadow-sm active:scale-95 whitespace-nowrap cursor-pointer"
+              title="Download Excel / CSV template for bulk importing clients (CID, Name, Phone, Address, Area, Package, Email)"
+            >
+              <Download className="w-3.5 h-3.5 text-sky-400" />
+              <span>{lang === 'bn' ? 'টেমপ্লেট (.xlsx)' : 'Download Excel Template'}</span>
+            </button>
+
+            {/* Excel Export (.xlsx) */}
+            <button
+              onClick={handleExportExcel}
+              disabled={filteredClients.length === 0}
+              className="px-3 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 font-bold text-xs rounded-xl border border-emerald-500/40 flex items-center gap-1.5 transition-all shadow-sm active:scale-95 whitespace-nowrap cursor-pointer"
+              title="Export filtered subscriber database to Microsoft Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{lang === 'bn' ? 'এক্সেল (.xlsx)' : 'Excel (.xlsx)'}</span>
+            </button>
+
+            {/* Excel Import */}
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs rounded-xl border border-emerald-400/40 flex items-center gap-1.5 transition-all shadow-sm active:scale-95 whitespace-nowrap cursor-pointer"
+              title="Batch import subscribers from Excel (.xlsx, .csv)"
+            >
+              <UploadCloud className="w-3.5 h-3.5 text-slate-950" />
+              <span>{lang === 'bn' ? 'ইমপোর্ট' : 'Import'}</span>
+            </button>
+
+            {/* CSV Export */}
             <button
               onClick={handleDownloadCSV}
               disabled={filteredClients.length === 0}
-              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all shadow-sm active:scale-95 whitespace-nowrap cursor-pointer"
+              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all shadow-sm active:scale-95 whitespace-nowrap cursor-pointer"
               title="Download current client list as CSV"
             >
               <Download className="w-3.5 h-3.5 text-slate-300" />
@@ -279,11 +416,11 @@ export const ClientDatabaseModal: React.FC<ClientDatabaseModalProps> = ({
             {onOpenBatchRouterQrStickers && (
               <button
                 onClick={onOpenBatchRouterQrStickers}
-                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs rounded-xl border border-emerald-400/40 flex items-center gap-1.5 transition-all shadow-md active:scale-95 whitespace-nowrap cursor-pointer"
+                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all shadow-sm active:scale-95 whitespace-nowrap cursor-pointer"
                 title="Generate & Print Physical Router Support QR Stickers for Clients"
               >
-                <QrCode className="w-4 h-4 text-slate-950" />
-                <span className="hidden md:inline">{lang === 'bn' ? 'সব রাউটার স্টিকার' : 'All Stickers'}</span>
+                <QrCode className="w-4 h-4 text-emerald-400" />
+                <span className="hidden md:inline">{lang === 'bn' ? 'স্টিকার' : 'Stickers'}</span>
               </button>
             )}
           </div>
@@ -656,6 +793,20 @@ export const ClientDatabaseModal: React.FC<ClientDatabaseModalProps> = ({
           </div>
         </div>
       )}
+
+      {/* Excel Batch Import Modal */}
+      <ClientExcelImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        existingClients={clients}
+        onConfirmImport={(importedList, mode) => {
+          if (onBatchImportClients) {
+            onBatchImportClients(importedList, mode);
+          }
+          setIsImportModalOpen(false);
+        }}
+        lang={lang}
+      />
 
     </div>
   );
